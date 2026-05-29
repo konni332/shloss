@@ -1,5 +1,6 @@
 use tracing_subscriber::EnvFilter;
 
+mod auth;
 mod config;
 mod crypto;
 mod db;

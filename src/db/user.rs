@@ -6,9 +6,9 @@ use crate::{crypto, error::ShlossResult};
 
 #[derive(Debug, Clone, FromRow)]
 pub struct User {
-    id: Uuid,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
+    pub(crate) id: Uuid,
+    pub(crate) created_at: DateTime<Utc>,
+    pub(crate) updated_at: DateTime<Utc>,
 }
 
 impl User {
