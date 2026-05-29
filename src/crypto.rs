@@ -1,5 +1,11 @@
-use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier, password_hash::SaltString};
-use rand_core::OsRng;
+use argon2::{
+    Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
+    password_hash::{
+        SaltString,
+        rand_core::{OsRng, RngCore},
+    },
+};
+use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
 use crate::error::CryptoError;
@@ -30,4 +36,55 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, CryptoError> 
 
 pub fn generate_uuid() -> Uuid {
     Uuid::new_v4()
+}
+
+pub struct GeneratedToken {
+    pub raw: String,
+    pub hash: String,
+}
+
+fn generate_raw_token() -> String {
+    let mut bytes = [0u8; 32];
+    OsRng.fill_bytes(&mut bytes);
+    hex::encode(bytes)
+}
+
+pub fn generate_token() -> GeneratedToken {
+    let raw = generate_raw_token();
+    let hash = hash_secret(&raw);
+    GeneratedToken { raw, hash }
+}
+
+fn hash_secret(raw: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(raw.as_bytes());
+    hex::encode(hasher.finalize())
+}
+
+pub fn verify_token(raw: &str, hash: &str) -> bool {
+    hash_secret(raw) == hash
+}
+
+pub struct GeneratedApiKey {
+    pub full_key: String,
+    pub prefix: String,
+    pub hash: String,
+}
+
+pub fn generate_api_key(prefix: String) -> GeneratedApiKey {
+    let secret = generate_raw_token();
+    let full_key = format!("{}_{}", &prefix, secret);
+    let hash = hash_secret(&full_key);
+
+    GeneratedApiKey {
+        full_key,
+        prefix,
+        hash,
+    }
+}
+
+/// Verifies that a raw api-key, and a hash match.
+/// The `raw` parameter, must contain the full api-key, including the prefix
+pub fn verify_api_key(raw: &str, hash: &str) -> bool {
+    hash_secret(raw) == hash
 }
