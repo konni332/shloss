@@ -17,14 +17,14 @@ pub fn hash_password(password: &str) -> Result<String, CryptoError> {
 
     let hash = argon2
         .hash_password(password.as_bytes(), &salt)
-        .map_err(|_| CryptoError::PasswordHashError)?
+        .map_err(|_| CryptoError::PasswordHash)?
         .to_string();
 
     Ok(hash)
 }
 
 pub fn verify_password(password: &str, hash: &str) -> Result<bool, CryptoError> {
-    let parsed_hash = PasswordHash::new(hash).map_err(|_| CryptoError::PasswordVerifyError)?;
+    let parsed_hash = PasswordHash::new(hash).map_err(|_| CryptoError::PasswordVerify)?;
 
     let argon2 = Argon2::default();
 

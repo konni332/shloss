@@ -41,9 +41,11 @@ pub enum ClientConfigError {
 #[derive(Debug, Error)]
 pub enum CryptoError {
     #[error("password hashing failed")]
-    PasswordHashError,
+    PasswordHash,
     #[error("password verification failed")]
-    PasswordVerifyError,
+    PasswordVerify,
     #[error("token verification failed")]
-    TokenVerifyError,
+    TokenVerify,
+    #[error("jwt error")]
+    Jwt,
 }
