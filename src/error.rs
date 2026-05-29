@@ -3,13 +3,16 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum ShlossError {
     #[error("config error: {0}")]
-    ConfigError(#[from] ConfigError),
+    Config(#[from] ConfigError),
 
     #[error("client config error: {0}")]
-    ClientConfigError(#[from] ClientConfigError),
+    ClientConfig(#[from] ClientConfigError),
 
     #[error("crypto error: {0}")]
-    CryptoError(#[from] CryptoError),
+    Crypto(#[from] CryptoError),
+
+    #[error("database error: {0}")]
+    Database(#[from] sqlx::error::Error),
 }
 
 pub type ShlossResult<T> = Result<T, ShlossError>;
@@ -41,4 +44,6 @@ pub enum CryptoError {
     PasswordHashError,
     #[error("password verification failed")]
     PasswordVerifyError,
+    #[error("token verification failed")]
+    TokenVerifyError,
 }
