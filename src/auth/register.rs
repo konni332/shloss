@@ -8,7 +8,7 @@ use crate::{
     error::ShlossResult,
 };
 
-pub enum Credential {
+pub enum RegisterCredentials {
     Password {
         username: String,
         password: String,
@@ -20,19 +20,28 @@ pub enum Credential {
     },
 }
 
-pub(crate) async fn register(pool: &PgPool, credential: Credential) -> ShlossResult<Uuid> {
+pub enum RegisterResult {
+    Password { user_id: Uuid },
+    ApiKey { user_id: Uuid, raw_key: String },
+}
+
+pub(crate) async fn register(
+    pool: &PgPool,
+    credential: RegisterCredentials,
+) -> ShlossResult<RegisterResult> {
     let user = User::create(pool).await?;
     match credential {
-        Credential::Password { username, password } => {
+        RegisterCredentials::Password { username, password } => {
             let hash = hash_password(&password)?;
             PasswordCredential::create(pool, &user.id, &username, &hash).await?;
+            Ok(RegisterResult::Password { user_id: user.id })
         }
-        Credential::ApiKey {
+        RegisterCredentials::ApiKey {
             name,
             key_prefix,
             expires_at,
         } => {
-            let api_key = generate_api_key(key_prefix.to_owned());
+            let api_key = generate_api_key(key_prefix.clone());
             ApiKey::create(
                 pool,
                 &user.id,
@@ -42,7 +51,10 @@ pub(crate) async fn register(pool: &PgPool, credential: Credential) -> ShlossRes
                 expires_at,
             )
             .await?;
+            Ok(RegisterResult::ApiKey {
+                user_id: user.id,
+                raw_key: api_key.full_key,
+            })
         }
     }
-    Ok(user.id)
 }

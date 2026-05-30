@@ -15,6 +15,7 @@ pub struct ShlossConfig {
 pub enum TokenKind {
     Opague,
     Jwt,
+    Refresh,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

@@ -6,13 +6,13 @@ use crate::{crypto::generate_uuid, error::ShlossResult};
 
 #[derive(Debug, Clone, FromRow)]
 pub struct Session {
-    id: Uuid,
-    user_id: Uuid,
-    ip_address: Option<ipnetwork::IpNetwork>,
-    user_agent: Option<String>,
-    created_at: DateTime<Utc>,
-    expires_at: Option<DateTime<Utc>>,
-    revoked_at: Option<DateTime<Utc>>,
+    pub(crate) id: Uuid,
+    pub(crate) user_id: Uuid,
+    pub(crate) ip_address: Option<ipnetwork::IpNetwork>,
+    pub(crate) user_agent: Option<String>,
+    pub(crate) created_at: DateTime<Utc>,
+    pub(crate) expires_at: Option<DateTime<Utc>>,
+    pub(crate) revoked_at: Option<DateTime<Utc>>,
 }
 
 impl Session {

@@ -6,25 +6,25 @@ use crate::{crypto::generate_uuid, error::ShlossResult};
 
 #[derive(Debug, Clone, FromRow)]
 pub struct PasswordCredential {
-    id: Uuid,
-    user_id: Uuid,
-    username: String,
-    hash: String,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
+    pub(crate) id: Uuid,
+    pub(crate) user_id: Uuid,
+    pub(crate) username: String,
+    pub(crate) hash: String,
+    pub(crate) created_at: DateTime<Utc>,
+    pub(crate) updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, FromRow)]
 pub struct ApiKey {
-    id: Uuid,
-    user_id: Uuid,
-    name: String,
-    key_prefix: String,
-    hash: String,
-    created_at: DateTime<Utc>,
-    last_used_at: Option<DateTime<Utc>>,
-    expires_at: Option<DateTime<Utc>>,
-    revoked_at: Option<DateTime<Utc>>,
+    pub(crate) id: Uuid,
+    pub(crate) user_id: Uuid,
+    pub(crate) name: String,
+    pub(crate) key_prefix: String,
+    pub(crate) hash: String,
+    pub(crate) created_at: DateTime<Utc>,
+    pub(crate) last_used_at: Option<DateTime<Utc>>,
+    pub(crate) expires_at: Option<DateTime<Utc>>,
+    pub(crate) revoked_at: Option<DateTime<Utc>>,
 }
 
 impl PasswordCredential {
@@ -88,6 +88,15 @@ impl PasswordCredential {
         .fetch_optional(pool)
         .await?;
         Ok(cred)
+    }
+    pub async fn get_hash_for_user(pool: &PgPool, user_id: &Uuid) -> ShlossResult<Option<String>> {
+        let hash = sqlx::query_scalar!(
+            "SELECT hash FROM password_credentials WHERE user_id = $1",
+            user_id
+        )
+        .fetch_optional(pool)
+        .await?;
+        Ok(hash)
     }
 }
 
