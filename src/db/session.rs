@@ -1,10 +1,11 @@
 use chrono::{DateTime, Utc};
+use serde::Serialize;
 use sqlx::{PgPool, prelude::FromRow};
 use uuid::Uuid;
 
 use crate::{crypto::generate_uuid, error::ShlossResult};
 
-#[derive(Debug, Clone, FromRow)]
+#[derive(Debug, Clone, FromRow, Serialize)]
 pub struct Session {
     pub(crate) id: Uuid,
     pub(crate) user_id: Uuid,

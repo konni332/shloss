@@ -136,10 +136,22 @@ impl ApiKey {
                 .await?;
         Ok(api_keys)
     }
-    pub async fn update_used(pool: &PgPool, id: &Uuid) -> ShlossResult<()> {
-        sqlx::query!("UPDATE api_keys SET last_used_at = NOW() WHERE id = $1", id)
-            .execute(pool)
-            .await?;
+    pub async fn revoke_for_user(pool: &PgPool, user_id: &Uuid) -> ShlossResult<()> {
+        sqlx::query!(
+            "UPDATE api_keys SET revoked_at = NOW() WHERE user_id = $1",
+            user_id
+        )
+        .execute(pool)
+        .await?;
+        Ok(())
+    }
+    pub async fn update_used(pool: &PgPool, hash: &str) -> ShlossResult<()> {
+        sqlx::query!(
+            "UPDATE api_keys SET last_used_at = NOW() WHERE hash = $1",
+            hash
+        )
+        .execute(pool)
+        .await?;
         Ok(())
     }
 }

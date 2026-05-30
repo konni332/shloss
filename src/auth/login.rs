@@ -6,10 +6,11 @@ use jsonwebtoken::EncodingKey;
 use serde::Deserialize;
 use serde_json::Value;
 use sqlx::PgPool;
+use uuid::Uuid;
 
 use crate::{
     crypto::{generate_token, hash_secret, verify_password},
-    db::{OpaqueToken, PasswordCredential, RefreshToken, Session, User},
+    db::{self, OpaqueToken, PasswordCredential, RefreshToken, Session, User},
     error::ShlossResult,
     jwt::generate_jwt,
 };
@@ -44,6 +45,7 @@ pub enum IssuedToken {
 }
 
 pub struct LoginResult {
+    pub user_id: Uuid,
     pub token: IssuedToken,
     pub refresh_token: Option<String>,
 }
@@ -57,7 +59,14 @@ pub async fn login(
         Credentials::Password { username, password } => {
             verify_password_credentials(pool, &username, &password).await?
         }
-        Credentials::ApiKey { full_key } => verify_api_key_credentials(pool, &full_key).await?,
+        Credentials::ApiKey { full_key } => {
+            let user = verify_api_key_credentials(pool, &full_key).await?;
+            if user.is_some() {
+                let hash = hash_secret(&full_key);
+                db::ApiKey::update_used(pool, &hash).await?;
+            }
+            user
+        }
     };
 
     let Some(user) = user else {
@@ -89,6 +98,7 @@ pub async fn login(
     };
 
     Ok(Some(LoginResult {
+        user_id: user.id,
         token,
         refresh_token,
     }))

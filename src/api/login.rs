@@ -2,6 +2,7 @@ use axum::{Json, extract::State, http::StatusCode};
 use chrono::{DateTime, Utc};
 use ipnetwork::IpNetwork;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::{
     auth::{self, Credentials, IssuedToken, LoginContext, RefreshTokenRequest, TokenType},
@@ -18,6 +19,7 @@ pub struct LoginRequest {
 }
 #[derive(Serialize)]
 pub struct LoginResponse {
+    user_id: Uuid,
     token: String,
     refresh: Option<String>,
 }
@@ -48,6 +50,7 @@ pub async fn api_login(
         return Err(StatusCode::UNAUTHORIZED);
     };
     Ok(Json(LoginResponse {
+        user_id: result.user_id,
         token: match result.token {
             IssuedToken::Jwt(t) => t,
             IssuedToken::Opaque(t) => t,
