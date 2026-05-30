@@ -9,23 +9,23 @@ use crate::{
 
 #[derive(Debug, Clone, FromRow)]
 pub struct OpaqueToken {
-    id: Uuid,
-    user_id: Uuid,
-    session_id: Uuid,
-    hash: String,
-    issued_at: DateTime<Utc>,
-    expires_at: DateTime<Utc>,
-    revoked_at: Option<DateTime<Utc>>,
+    pub(crate) id: Uuid,
+    pub(crate) user_id: Uuid,
+    pub(crate) session_id: Uuid,
+    pub(crate) hash: String,
+    pub(crate) issued_at: DateTime<Utc>,
+    pub(crate) expires_at: DateTime<Utc>,
+    pub(crate) revoked_at: Option<DateTime<Utc>>,
 }
 #[derive(Debug, Clone, FromRow)]
 pub struct RefreshToken {
-    id: Uuid,
-    user_id: Uuid,
-    session_id: Uuid,
-    hash: String,
-    issued_at: DateTime<Utc>,
-    expires_at: DateTime<Utc>,
-    revoked_at: Option<DateTime<Utc>>,
+    pub(crate) id: Uuid,
+    pub(crate) user_id: Uuid,
+    pub(crate) session_id: Uuid,
+    pub(crate) hash: String,
+    pub(crate) issued_at: DateTime<Utc>,
+    pub(crate) expires_at: DateTime<Utc>,
+    pub(crate) revoked_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, FromRow)]
@@ -85,6 +85,14 @@ impl OpaqueToken {
         .await?;
         Ok(())
     }
+    pub async fn find_valid_by_hash(pool: &PgPool, hash: &str) -> ShlossResult<Option<Self>> {
+        let token = sqlx::query_as!(
+            OpaqueToken,
+            "SELECT * FROM opaque_tokens WHERE hash = $1 AND revoked_at IS NULL AND expires_at > NOW()",
+            hash
+        ).fetch_optional(pool).await?;
+        Ok(token)
+    }
 }
 
 impl RefreshToken {
@@ -140,5 +148,13 @@ impl RefreshToken {
         .execute(pool)
         .await?;
         Ok(())
+    }
+    pub async fn find_valid_by_hash(pool: &PgPool, hash: &str) -> ShlossResult<Option<Self>> {
+        let token = sqlx::query_as!(
+            RefreshToken,
+            "SELECT * FROM opaque_tokens WHERE hash = $1 AND revoked_at IS NULL AND expires_at > NOW()",
+            hash
+        ).fetch_optional(pool).await?;
+        Ok(token)
     }
 }
