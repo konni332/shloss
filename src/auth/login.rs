@@ -5,10 +5,9 @@ use ipnetwork::IpNetwork;
 use jsonwebtoken::EncodingKey;
 use serde_json::Value;
 use sqlx::PgPool;
-use uuid::Uuid;
 
 use crate::{
-    crypto::{generate_token, hash_password, hash_secret, verify_password},
+    crypto::{generate_token, hash_secret, verify_password},
     db::{OpaqueToken, PasswordCredential, RefreshToken, Session, User},
     error::ShlossResult,
     jwt::generate_jwt,

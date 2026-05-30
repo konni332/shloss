@@ -6,12 +6,12 @@ use crate::{crypto::hash_secret, error::ClientConfigError};
 
 #[derive(Debug, Deserialize)]
 pub struct ClientConfig {
-    keys: Vec<ServiceKey>,
+    pub keys: Vec<ServiceKey>,
 }
 #[derive(Debug, Deserialize)]
 pub struct ServiceKey {
-    name: String,
-    hash: String,
+    pub name: String,
+    pub hash: String,
 }
 
 impl ClientConfig {
@@ -42,4 +42,3 @@ impl ClientConfig {
         self.keys.iter().any(|k| k.hash == hash)
     }
 }
-
