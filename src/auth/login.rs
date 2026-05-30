@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use ipnetwork::IpNetwork;
 use jsonwebtoken::EncodingKey;
+use serde::Deserialize;
 use serde_json::Value;
 use sqlx::PgPool;
 
@@ -13,11 +14,13 @@ use crate::{
     jwt::generate_jwt,
 };
 
+#[derive(Deserialize)]
 pub enum Credentials {
     Password { username: String, password: String },
     ApiKey { full_key: String },
 }
 
+#[derive(Deserialize)]
 pub enum TokenType {
     Jwt { claims: HashMap<String, Value> },
     Opaque { expires_at: DateTime<Utc> },

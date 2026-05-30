@@ -1,11 +1,13 @@
 use tracing_subscriber::EnvFilter;
 
+mod api;
 mod auth;
 mod config;
 mod crypto;
 mod db;
 mod error;
 mod jwt;
+mod server;
 
 pub use config::{CredentialKind, ShlossConfig, TokenKind};
 

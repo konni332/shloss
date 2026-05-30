@@ -2,7 +2,7 @@ use chrono::{DateTime, Duration, Utc};
 
 use crate::{
     config::ClientConfig,
-    crypto::{GeneratedToken, generate_token, hash_secret, verify_token},
+    crypto::{GeneratedToken, generate_token, hash_secret},
 };
 
 pub const SERVICE_TOKEN_TTL: Duration = Duration::days(1);
@@ -28,11 +28,6 @@ impl ServiceKeyStore {
         let hash = hash_secret(key);
         self.key_hashes.iter().any(|h| h == &hash)
     }
-}
-
-pub(crate) fn register_service(store: &mut ServiceKeyStore, raw_key: &str) {
-    let hash = hash_secret(raw_key);
-    store.key_hashes.push(hash);
 }
 
 pub(crate) fn login_service(store: &mut ServiceKeyStore, raw_key: &str) -> Option<GeneratedToken> {

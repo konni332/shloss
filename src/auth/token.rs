@@ -5,31 +5,16 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{
-    TokenKind,
     crypto::hash_secret,
     db::{OpaqueToken, RefreshToken},
     error::ShlossResult,
     jwt::Claims,
 };
 
-pub struct TokenToValidate {
-    pub raw: String,
-    pub kind: TokenKind,
-}
-
-pub async fn validate_token(
-    pool: &PgPool,
-    decoding_key: &DecodingKey,
-    token: TokenToValidate,
-) -> ShlossResult<Option<Uuid>> {
-    match token.kind {
-        TokenKind::Opague => validate_opaque_token(pool, &token.raw).await,
-        TokenKind::Refresh => validate_refresh_token(pool, &token.raw).await,
-        TokenKind::Jwt => validate_jwt(decoding_key, &token.raw).await,
-    }
-}
-
-async fn validate_jwt(decoding_key: &DecodingKey, token: &str) -> ShlossResult<Option<Uuid>> {
+/// Validates a given JWT.
+/// Uses the `AppState` decoding_key to verify the claims and returns the user_id of contained in
+/// the token
+pub async fn validate_jwt(decoding_key: &DecodingKey, token: &str) -> ShlossResult<Option<Uuid>> {
     let mut validation = Validation::new(Algorithm::RS256);
     validation.required_spec_claims = HashSet::new();
 
@@ -39,13 +24,15 @@ async fn validate_jwt(decoding_key: &DecodingKey, token: &str) -> ShlossResult<O
     Ok(claims.map(|c| c.sub))
 }
 
-async fn validate_refresh_token(pool: &PgPool, raw: &str) -> ShlossResult<Option<Uuid>> {
+/// Validates a given refresh token against the DB and returns the tokens internal id.
+pub async fn validate_refresh_token(pool: &PgPool, raw: &str) -> ShlossResult<Option<Uuid>> {
     let hash = hash_secret(raw);
     let token = RefreshToken::find_valid_by_hash(pool, &hash).await?;
-    Ok(token.map(|t| t.user_id))
+    Ok(token.map(|t| t.id))
 }
 
-async fn validate_opaque_token(pool: &PgPool, raw: &str) -> ShlossResult<Option<Uuid>> {
+/// Validates a given refresh token against the DB and returns the tokens user_id.
+pub async fn validate_opaque_token(pool: &PgPool, raw: &str) -> ShlossResult<Option<Uuid>> {
     let hash = hash_secret(raw);
     let token = OpaqueToken::find_valid_by_hash(pool, &hash).await?;
     Ok(token.map(|t| t.user_id))
