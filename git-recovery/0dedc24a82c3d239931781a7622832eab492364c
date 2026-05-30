@@ -42,4 +42,3 @@ impl ClientConfig {
         self.keys.iter().any(|k| k.hash == hash)
     }
 }
-

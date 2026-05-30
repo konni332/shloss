@@ -1,6 +1,5 @@
 [workspace]
 members = ["crates/shloss-cli"]
-resolver = "3"
 
 [package]
 name = "shloss"
