@@ -24,9 +24,7 @@ pub fn init_logging() {
 }
 
 pub fn load_config() -> anyhow::Result<ShlossConfig> {
-    let config = ShlossConfig::load()?;
-    config.validate().context("failed to validate config")?;
-    Ok(config)
+    ShlossConfig::load()
 }
 
 pub fn load_client_credentials() -> anyhow::Result<ClientConfig> {

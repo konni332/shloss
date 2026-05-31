@@ -52,11 +52,7 @@ database_url = "postgresql:///shloss"
 host = "127.0.0.1"
 port = 3000
 
-credentials = ["password", "api-key"]
-tokens = ["jwt", "opague"]
 ```
-
-The `credentials` field controls which credential types are enabled for user registration and login. The `tokens` field controls which token types services are allowed to request.
 
 The RSA private key is passed as an environment variable and never written to disk by Shloss:
 
@@ -90,7 +86,7 @@ Authorization: Bearer shloss_<key>
 
 ## Credentials and tokens
 
-Users can be registered with a password or an API key. Both credential types can coexist and the enabled types are controlled by the `credentials` config field.
+Users can be registered with a password or an API key. Both credential types can coexist.
 
 Passwords are hashed with Argon2. API keys and all token types are randomly generated 32-byte values hashed with SHA-256. The distinction is intentional: Argon2 is designed for low-entropy human-chosen secrets. Machine-generated random bytes do not need it.
 

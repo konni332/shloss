@@ -8,8 +8,6 @@ pub struct ShlossConfig {
     pub database_url: String,
     pub host: String,
     pub port: usize,
-    pub credentials: Vec<CredentialKind>,
-    pub tokens: Vec<TokenKind>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -30,14 +28,10 @@ pub enum CredentialKind {
 impl Default for ShlossConfig {
     fn default() -> Self {
         let database_url = "postgresql:///shloss".to_owned();
-        let credentials = vec![CredentialKind::ApiKey, CredentialKind::Password];
-        let tokens = vec![TokenKind::Opague, TokenKind::Jwt];
         Self {
             port: 3000,
             host: "127.0.0.1".to_string(),
             database_url,
-            credentials,
-            tokens,
         }
     }
 }
@@ -58,16 +52,5 @@ impl ShlossConfig {
             .build()?
             .try_deserialize()
             .map_err(Into::into)
-    }
-    pub(crate) fn validate(&self) -> Result<(), ConfigError> {
-        if self.credentials.is_empty() {
-            return Err(ConfigError::EmptyCredentials);
-        }
-
-        if self.tokens.is_empty() {
-            return Err(ConfigError::EmptyTokens);
-        }
-
-        Ok(())
     }
 }
