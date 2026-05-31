@@ -53,8 +53,8 @@ impl PasswordCredential {
         pool: &PgPool,
         user_id: &Uuid,
         new_hash: &str,
-    ) -> ShlossResult<()> {
-        sqlx::query!(
+    ) -> ShlossResult<bool> {
+        let result = sqlx::query!(
             "UPDATE password_credentials SET hash = $2, updated_at = NOW() WHERE user_id = $1",
             user_id,
             new_hash,
@@ -62,7 +62,7 @@ impl PasswordCredential {
         .execute(pool)
         .await?;
 
-        Ok(())
+        Ok(result.rows_affected() > 0)
     }
     pub async fn update_username(
         pool: &PgPool,
