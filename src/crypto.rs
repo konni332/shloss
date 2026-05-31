@@ -85,9 +85,3 @@ pub fn generate_api_key(prefix: String) -> GeneratedApiKey {
         hash,
     }
 }
-
-/// Verifies that a raw api-key, and a hash match.
-/// The `raw` parameter, must contain the full api-key, including the prefix
-pub fn verify_api_key(raw: &str, hash: &str) -> bool {
-    hash_secret(raw) == hash
-}
