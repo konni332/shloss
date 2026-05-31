@@ -35,3 +35,5 @@ chrono = { version = "0.4", features = ["serde"] }
 ipnetwork = { version = "0.21", features = ["serde"] }
 jsonwebtoken = "10"
 tower = "0.5"
+rsa = { version = "0.9", features = ["pem"] }
+base64 = "0.22"

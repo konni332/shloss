@@ -3,6 +3,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
 };
+use serde::Serialize;
 use uuid::Uuid;
 
 use crate::{
@@ -10,11 +11,12 @@ use crate::{
     server::{AppState, AuthService},
 };
 
+#[derive(Serialize)]
 pub struct GetSessionsResponse {
     sessions: Vec<Session>,
 }
 
-pub async fn get_sessions(
+pub async fn api_list_sessions(
     State(state): State<AppState>,
     _service: AuthService,
     Path(user_id): Path<Uuid>,
@@ -25,7 +27,7 @@ pub async fn get_sessions(
     Ok(Json(GetSessionsResponse { sessions }))
 }
 
-pub async fn revoke_session(
+pub async fn api_revoke_session(
     State(state): State<AppState>,
     _service: AuthService,
     Path(session_id): Path<Uuid>,

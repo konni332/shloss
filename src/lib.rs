@@ -1,17 +1,18 @@
+use anyhow::Context;
 use tracing_subscriber::EnvFilter;
 
 mod api;
 mod auth;
 mod config;
 mod crypto;
-mod db;
+pub mod db;
 mod error;
-mod jwt;
-mod server;
+pub mod jwt;
+pub mod server;
 
 pub use config::{CredentialKind, ShlossConfig, TokenKind};
 
-use crate::config::ClientConfig;
+pub use crate::config::ClientConfig;
 
 /// Initialize logging. This should only ever be called once, on program start
 pub fn init_logging() {
@@ -24,12 +25,14 @@ pub fn init_logging() {
 
 pub fn load_config() -> anyhow::Result<ShlossConfig> {
     let config = ShlossConfig::load()?;
-    config.validate()?;
+    config.validate().context("failed to validate config")?;
     Ok(config)
 }
 
 pub fn load_client_credentials() -> anyhow::Result<ClientConfig> {
     let config = ClientConfig::load()?;
-    config.validate()?;
+    config
+        .validate()
+        .context("failed to validate client config")?;
     Ok(config)
 }

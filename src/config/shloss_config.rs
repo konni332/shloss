@@ -6,6 +6,8 @@ use crate::error::ConfigError;
 #[derive(Debug, Deserialize)]
 pub struct ShlossConfig {
     pub database_url: String,
+    pub host: String,
+    pub port: usize,
     pub credentials: Vec<CredentialKind>,
     pub tokens: Vec<TokenKind>,
 }
@@ -31,6 +33,8 @@ impl Default for ShlossConfig {
         let credentials = vec![CredentialKind::ApiKey, CredentialKind::Password];
         let tokens = vec![TokenKind::Opague, TokenKind::Jwt];
         Self {
+            port: 3000,
+            host: "127.0.0.1".to_string(),
             database_url,
             credentials,
             tokens,
