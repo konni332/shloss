@@ -1,8 +1,6 @@
 use config::Config;
 use serde::{Deserialize, Serialize};
 
-use crate::error::ConfigError;
-
 #[derive(Debug, Deserialize)]
 pub struct ShlossConfig {
     pub database_url: String,

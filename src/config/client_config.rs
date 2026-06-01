@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::Path};
 
 use serde::Deserialize;
 
-use crate::{crypto::hash_secret, error::ClientConfigError};
+use crate::error::ClientConfigError;
 
 #[derive(Debug, Deserialize)]
 pub struct ClientConfig {
@@ -36,9 +36,5 @@ impl ClientConfig {
             }
         }
         Ok(())
-    }
-    pub(crate) fn verify(&self, raw_key: &str) -> bool {
-        let hash = hash_secret(raw_key);
-        self.keys.iter().any(|k| k.hash == hash)
     }
 }

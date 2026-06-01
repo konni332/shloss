@@ -12,7 +12,9 @@ pub struct ServiceKeyStore {
     key_hashes: Vec<String>,
     service_tokens: Vec<ServiceToken>,
 }
-
+// Dead code is allowed, because we want a consistent in memory model of the DB data even if some
+// or all fields are never read!
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct ServiceToken {
     hash: String,

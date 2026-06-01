@@ -4,6 +4,9 @@ use uuid::Uuid;
 
 use crate::{crypto::generate_uuid, error::ShlossResult};
 
+// Dead code is allowed, because we want a consistent in memory model of the DB data even if some
+// or all fields are never read!
+#[allow(dead_code)]
 #[derive(Debug, Clone, FromRow)]
 pub struct PasswordCredential {
     pub(crate) id: Uuid,
@@ -14,6 +17,9 @@ pub struct PasswordCredential {
     pub(crate) updated_at: DateTime<Utc>,
 }
 
+// Dead code is allowed, because we want a consistent in memory model of the DB data even if some
+// or all fields are never read!
+#[allow(dead_code)]
 #[derive(Debug, Clone, FromRow)]
 pub struct ApiKey {
     pub(crate) id: Uuid,

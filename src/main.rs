@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use shloss::{db, init_logging, load_client_credentials, load_config};
 use tokio::sync::RwLock;
-use tracing::{info, info_span};
+use tracing::info;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

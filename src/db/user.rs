@@ -4,6 +4,9 @@ use uuid::Uuid;
 
 use crate::{crypto, error::ShlossResult};
 
+// Dead code is allowed, because we want a consistent in memory model of the DB data even if some
+// or all fields are never read!
+#[allow(dead_code)]
 #[derive(Debug, Clone, FromRow)]
 pub struct User {
     pub(crate) id: Uuid,

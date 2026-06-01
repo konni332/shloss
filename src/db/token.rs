@@ -7,6 +7,9 @@ use crate::{
     error::ShlossResult,
 };
 
+// Dead code is allowed, because we want a consistent in memory model of the DB data even if some
+// or all fields are never read!
+#[allow(dead_code)]
 #[derive(Debug, Clone, FromRow)]
 pub struct OpaqueToken {
     pub(crate) id: Uuid,
@@ -17,6 +20,10 @@ pub struct OpaqueToken {
     pub(crate) expires_at: DateTime<Utc>,
     pub(crate) revoked_at: Option<DateTime<Utc>>,
 }
+
+// Dead code is allowed, because we want a consistent in memory model of the DB data even if some
+// or all fields are never read!
+#[allow(dead_code)]
 #[derive(Debug, Clone, FromRow)]
 pub struct RefreshToken {
     pub(crate) id: Uuid,
