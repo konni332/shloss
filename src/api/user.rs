@@ -96,7 +96,6 @@ pub async fn api_revoke_all_api_keys(
 
 #[derive(Deserialize)]
 pub struct AddApiKeyRequest {
-    user_id: Uuid,
     name: String,
     key_prefix: String,
     expires_at: Option<DateTime<Utc>>,
@@ -107,17 +106,18 @@ pub struct AddApiKeyResponse {
     key: String,
 }
 
-#[instrument(skip(state, _service, body), fields(user_id = %body.user_id, key_prefix = %body.key_prefix))]
+#[instrument(skip(state, _service, body), fields(key_prefix = %body.key_prefix))]
 pub async fn api_add_api_key(
     State(state): State<AppState>,
     _service: AuthService,
+    Path(user_id): Path<Uuid>,
     Json(body): Json<AddApiKeyRequest>,
 ) -> Result<Json<AddApiKeyResponse>, StatusCode> {
     tracing::info!("adding api key");
     let generated_key = generate_api_key(body.key_prefix.clone());
     db::ApiKey::create(
         &state.pool,
-        &body.user_id,
+        &user_id,
         &body.name,
         &body.key_prefix,
         &generated_key.hash,
@@ -136,19 +136,19 @@ pub async fn api_add_api_key(
 
 #[derive(Deserialize)]
 pub struct RevokeApiKeyRequest {
-    user_id: Uuid,
     key: String,
 }
 
-#[instrument(skip(state, _service, body), fields(user_id = %body.user_id))]
+#[instrument(skip(state, _service, body))]
 pub async fn api_revoke_api_key(
     State(state): State<AppState>,
     _service: AuthService,
+    Path(user_id): Path<Uuid>,
     Json(body): Json<RevokeApiKeyRequest>,
 ) -> StatusCode {
     tracing::info!("revoking api key");
     let hash = hash_secret(&body.key);
-    match db::ApiKey::revoke(&state.pool, &hash, &body.user_id).await {
+    match db::ApiKey::revoke(&state.pool, &hash, &user_id).await {
         Ok(_) => {
             tracing::info!("api key revoked successfully");
             StatusCode::OK
@@ -162,14 +162,14 @@ pub async fn api_revoke_api_key(
 
 #[derive(Deserialize)]
 pub struct ChangePasswordRequest {
-    user_id: Uuid,
     new_password: String,
 }
 
-#[instrument(skip(state, _service, body), fields(user_id = %body.user_id))]
+#[instrument(skip(state, _service, body))]
 pub async fn api_change_password(
     State(state): State<AppState>,
     _service: AuthService,
+    Path(user_id): Path<Uuid>,
     Json(body): Json<ChangePasswordRequest>,
 ) -> StatusCode {
     tracing::info!("changing password");
@@ -180,7 +180,7 @@ pub async fn api_change_password(
             return StatusCode::INTERNAL_SERVER_ERROR;
         }
     };
-    match db::PasswordCredential::update_password(&state.pool, &body.user_id, &new_hash).await {
+    match db::PasswordCredential::update_password(&state.pool, &user_id, &new_hash).await {
         Ok(true) => {
             tracing::info!("password updated");
             StatusCode::OK
@@ -198,20 +198,18 @@ pub async fn api_change_password(
 
 #[derive(Deserialize)]
 pub struct ChangeUsernameRequest {
-    user_id: Uuid,
     new_username: String,
 }
 
-#[instrument(skip(state, _service, body), fields(user_id = %body.user_id))]
+#[instrument(skip(state, _service, body))]
 pub async fn api_change_username(
     State(state): State<AppState>,
     _service: AuthService,
+    Path(user_id): Path<Uuid>,
     Json(body): Json<ChangeUsernameRequest>,
 ) -> StatusCode {
     tracing::info!("changing username");
-    match db::PasswordCredential::update_username(&state.pool, &body.user_id, &body.new_username)
-        .await
-    {
+    match db::PasswordCredential::update_username(&state.pool, &user_id, &body.new_username).await {
         Ok(_) => {
             tracing::info!("username updated successfully");
             StatusCode::OK

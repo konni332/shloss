@@ -21,7 +21,7 @@ use crate::{
         token::api_validate_token,
         user::{
             api_add_api_key, api_change_password, api_change_username, api_delete_user,
-            api_revoke_api_key, api_revoke_tokens_and_sessions_for_user,
+            api_revoke_all_api_keys, api_revoke_api_key, api_revoke_tokens_and_sessions_for_user,
         },
     },
     auth::{ServiceKeyStore, validate_service_token},
@@ -81,18 +81,22 @@ pub fn build_router(state: AppState) -> Router {
             post(api_revoke_tokens_and_sessions_for_user),
         )
         // sessions
-        .route("/sessions/{user_id}", get(api_list_sessions))
         .route("/sessions/{session_id}/revoke", post(api_revoke_session))
         // users
         .route("/users/{user_id}", delete(api_delete_user))
         .route(
-            "/users/{user_id}/revoke",
+            "/users/{user_id}/sessions/revoke-all",
             post(api_revoke_tokens_and_sessions_for_user),
         )
+        .route("/users/{user_id}/sessions", get(api_list_sessions))
         .route("/users/{user_id}/password", post(api_change_password))
         .route("/users/{user_id}/username", post(api_change_username))
         .route("/users/{user_id}/api-keys", post(api_add_api_key))
-        .route("/users/{user_id}/api-keys/revoke", post(api_revoke_api_key));
+        .route("/users/{user_id}/api-keys/revoke", post(api_revoke_api_key))
+        .route(
+            "/users/{user_id}/api-keys/revoke-all",
+            post(api_revoke_all_api_keys),
+        );
 
     Router::new().nest("/v1", v1).with_state(state)
 }
