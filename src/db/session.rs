@@ -45,11 +45,12 @@ impl Session {
 
         Ok(())
     }
-    pub async fn revoke(pool: &PgPool, id: &Uuid) -> ShlossResult<()> {
-        sqlx::query!("UPDATE sessions SET revoked_at = NOW() WHERE id = $1", id)
+    pub async fn revoke(pool: &PgPool, id: &Uuid) -> ShlossResult<bool> {
+        let rows = sqlx::query!("UPDATE sessions SET revoked_at = NOW() WHERE id = $1", id)
             .execute(pool)
-            .await?;
-        Ok(())
+            .await?
+            .rows_affected();
+        Ok(rows > 0)
     }
     pub async fn find_for_user(pool: &PgPool, user_id: &Uuid) -> ShlossResult<Vec<Session>> {
         let sessions = sqlx::query_as!(

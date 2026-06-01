@@ -21,10 +21,28 @@ pub enum Credentials {
     ApiKey { full_key: String },
 }
 
+impl std::fmt::Display for Credentials {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Password { .. } => write!(f, "password"),
+            Self::ApiKey { .. } => write!(f, "api-key"),
+        }
+    }
+}
+
 #[derive(Deserialize)]
 pub enum TokenType {
     Jwt { claims: HashMap<String, Value> },
     Opaque { expires_at: DateTime<Utc> },
+}
+
+impl std::fmt::Display for TokenType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Jwt { .. } => write!(f, "jwt"),
+            Self::Opaque { .. } => write!(f, "opaque"),
+        }
+    }
 }
 
 pub struct RefreshTokenRequest {

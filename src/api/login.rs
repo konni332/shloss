@@ -2,6 +2,7 @@ use axum::{Json, extract::State, http::StatusCode};
 use chrono::{DateTime, Utc};
 use ipnetwork::IpNetwork;
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{
@@ -24,11 +25,21 @@ pub struct LoginResponse {
     refresh: Option<String>,
 }
 
+#[instrument(
+    skip(state, _service, body),
+    fields(
+        credential_kind = %body.credentials,
+        token_kind = %body.token_kind,
+        refresh = body.refresh.is_some()
+        )
+    )]
 pub async fn api_login(
     State(state): State<AppState>,
     _service: AuthService,
     Json(body): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, StatusCode> {
+    tracing::info!("user login");
+
     let pool = &state.pool;
     let encoding_key = &state.encoding_key;
 
@@ -42,13 +53,16 @@ pub async fn api_login(
             .map(|expires_at| RefreshTokenRequest { expires_at }),
     };
 
-    let result = auth::login(pool, encoding_key, ctx)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let result = auth::login(pool, encoding_key, ctx).await.map_err(|e| {
+        tracing::error!(error = %e, "error trying to login user");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     let Some(result) = result else {
+        tracing::warn!(ip_address = ?body.ip_address, "user login unauthorized");
         return Err(StatusCode::UNAUTHORIZED);
     };
+    tracing::info!("user logged in");
     Ok(Json(LoginResponse {
         user_id: result.user_id,
         token: match result.token {

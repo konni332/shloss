@@ -23,11 +23,12 @@ impl User {
         .await?;
         Ok(user)
     }
-    pub async fn delete(pool: &PgPool, id: &Uuid) -> ShlossResult<()> {
-        sqlx::query!("DELETE FROM users WHERE id = $1", id)
+    pub async fn delete(pool: &PgPool, id: &Uuid) -> ShlossResult<bool> {
+        let rows = sqlx::query!("DELETE FROM users WHERE id = $1", id)
             .execute(pool)
-            .await?;
-        Ok(())
+            .await?
+            .rows_affected();
+        Ok(rows > 0)
     }
     pub async fn get_username(pool: &PgPool, id: &Uuid) -> ShlossResult<Option<String>> {
         let username = sqlx::query_scalar!(

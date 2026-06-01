@@ -8,6 +8,7 @@ use axum::{
 };
 use sqlx::PgPool;
 use tokio::sync::RwLock;
+use tracing::debug;
 
 use crate::{
     api::{
@@ -54,8 +55,10 @@ impl FromRequestParts<AppState> for AuthService {
 
         let store = state.store.read().await;
         if validate_service_token(&store, token) {
+            debug!("service token validated");
             Ok(AuthService)
         } else {
+            tracing::warn!("service token invalid");
             Err(StatusCode::UNAUTHORIZED)
         }
     }
