@@ -79,16 +79,18 @@ port = 3000
 
 All three fields have defaults and the file itself is optional. The defaults are shown above.
 
-The RSA private key is passed as an environment variable and never written to disk by Shloss:
+The RSA keys are passed as environment variables and never written to disk by Shloss:
 
 ```bash
 export SHLOSS_PRIVATE_KEY="$(cat private.pem)"
+export SHLOSS_PUBLIC_KEY="$(cat public.pem)"
 ```
 
-You can generate a key with:
+You can generate keys with:
 
 ```bash
 openssl genrsa -out private.pem 4096
+openssl rsa -in private.pem -pubout -out public.pem
 ```
 
 ## Service credentials

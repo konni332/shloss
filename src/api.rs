@@ -20,11 +20,12 @@ use crate::api::{
     refresh::api_refresh_token,
     register::api_register,
     service_auth::api_login_service,
-    session::{api_list_sessions, api_revoke_session},
+    session::api_revoke_session,
     token::api_validate_token,
     user::{
         api_add_api_key, api_change_password, api_change_username, api_delete_user,
-        api_revoke_all_api_keys, api_revoke_api_key, api_revoke_tokens_and_sessions_for_user,
+        api_list_sessions, api_revoke_all_api_keys, api_revoke_api_key,
+        api_revoke_tokens_and_sessions_for_user,
     },
 };
 
@@ -40,10 +41,6 @@ pub fn build_router(state: AppState) -> Router {
         // tokens
         .route("/tokens/validate", post(api_validate_token))
         .route("/tokens/refresh", post(api_refresh_token))
-        .route(
-            "/tokens/revoke",
-            post(api_revoke_tokens_and_sessions_for_user),
-        )
         // sessions
         .route("/sessions/{session_id}/revoke", post(api_revoke_session))
         // users

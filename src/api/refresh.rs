@@ -54,7 +54,7 @@ pub async fn api_refresh_token(
         })?;
     let Some(new_refresh) = result else {
         tracing::warn!("invalid refresh token");
-        tracing::debug!(
+        tracing::error!(
             "the refresh token is invalid even tho validity was already checked and confirmed. This is likely a race condition or some inconsistency, please report this immediatly"
         );
         return Ok(Json(RefreshResponse::Invalid));

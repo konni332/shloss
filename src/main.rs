@@ -19,8 +19,9 @@ async fn main() -> anyhow::Result<()> {
 
     let private_key_pem =
         std::env::var("SHLOSS_PRIVATE_KEY").context("SHLOSS_PRIVATE_KEY not set")?;
-
     info!("private key pem loaded");
+    let public_key_pem = std::env::var("SHLOSS_PUBLIC_KEY").context("SHLOSS_PUBLIC_KEY not set")?;
+    info!("public key pem loaded");
 
     let pool = db::init(&config.database_url)
         .await
@@ -33,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
             .context("invalid private key")?,
     );
     let decoding_key = Arc::new(
-        jsonwebtoken::DecodingKey::from_rsa_pem(private_key_pem.as_bytes())
+        jsonwebtoken::DecodingKey::from_rsa_pem(public_key_pem.as_bytes())
             .context("invalid private key")?,
     );
     let jwks = Arc::new(

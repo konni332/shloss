@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 use crate::{
     auth,
+    error::ShlossError,
     server::{AppState, AuthService},
 };
 
@@ -58,6 +59,12 @@ pub async fn api_register(
         Ok(resp) => {
             tracing::info!(user_id = %resp, "user registered successfully");
             Ok(Json(resp))
+        }
+        Err(ShlossError::Database(sqlx::Error::Database(db_e)))
+            if db_e.code().map(|c| c.as_ref() == "23505").unwrap_or(false) =>
+        {
+            tracing::warn!("username already taken");
+            Err(StatusCode::CONFLICT)
         }
         Err(e) => {
             tracing::error!(error = %e, "user registration failed");

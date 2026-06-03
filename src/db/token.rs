@@ -189,7 +189,7 @@ impl RefreshToken {
     pub async fn find_valid_by_hash(pool: &PgPool, hash: &str) -> ShlossResult<Option<Self>> {
         let token = sqlx::query_as!(
             RefreshToken,
-            "SELECT * FROM opaque_tokens WHERE hash = $1 AND revoked_at IS NULL AND expires_at > NOW()",
+            "SELECT * FROM refresh_tokens WHERE hash = $1 AND revoked_at IS NULL AND expires_at > NOW()",
             hash
         ).fetch_optional(pool).await?;
         Ok(token)

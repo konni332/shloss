@@ -10,16 +10,16 @@ pub const SERVICE_TOKEN_TTL: Duration = Duration::days(1);
 #[derive(Debug, Clone, Default)]
 pub struct ServiceKeyStore {
     key_hashes: Vec<String>,
-    service_tokens: Vec<ServiceToken>,
+    pub service_tokens: Vec<ServiceToken>,
 }
 // Dead code is allowed, because we want a consistent in memory model of the DB data even if some
 // or all fields are never read!
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct ServiceToken {
-    hash: String,
-    created_at: DateTime<Utc>,
-    expires_at: DateTime<Utc>,
+    pub hash: String,
+    pub created_at: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
 }
 
 impl ServiceKeyStore {
@@ -30,9 +30,15 @@ impl ServiceKeyStore {
         let hash = hash_secret(key);
         self.key_hashes.iter().any(|h| h == &hash)
     }
+    pub fn with_test_key(raw_key: &str) -> Self {
+        let mut store = Self::new();
+        let hash = hash_secret(raw_key);
+        store.key_hashes.push(hash);
+        store
+    }
 }
 
-pub(crate) fn login_service(store: &mut ServiceKeyStore, raw_key: &str) -> Option<GeneratedToken> {
+pub fn login_service(store: &mut ServiceKeyStore, raw_key: &str) -> Option<GeneratedToken> {
     let hash = hash_secret(raw_key);
     if !store.key_hashes.iter().any(|kh| kh == &hash) {
         return None;
@@ -50,7 +56,7 @@ pub(crate) fn login_service(store: &mut ServiceKeyStore, raw_key: &str) -> Optio
     Some(generated_token)
 }
 
-pub(crate) fn validate_service_token(store: &ServiceKeyStore, raw_token: &str) -> bool {
+pub fn validate_service_token(store: &ServiceKeyStore, raw_token: &str) -> bool {
     let hash = hash_secret(raw_token);
     let now = Utc::now();
     store

@@ -2,9 +2,9 @@ use anyhow::Context;
 use tracing_subscriber::EnvFilter;
 
 mod api;
-mod auth;
+pub mod auth;
 mod config;
-mod crypto;
+pub mod crypto;
 pub mod db;
 mod error;
 pub mod jwt;
@@ -13,6 +13,7 @@ pub mod server;
 pub use crate::config::ClientConfig;
 pub use api::build_router;
 pub use config::{CredentialKind, ShlossConfig, TokenKind};
+pub use crypto::{GeneratedToken, hash_secret};
 
 /// Initialize logging. This should only ever be called once, on program start
 pub fn init_logging() {

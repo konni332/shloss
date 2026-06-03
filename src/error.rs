@@ -46,4 +46,3 @@ pub enum CryptoError {
     #[error("jwt error")]
     Jwt,
 }
-

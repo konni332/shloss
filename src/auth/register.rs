@@ -7,7 +7,7 @@ use crate::{
     error::ShlossResult,
 };
 
-pub(crate) async fn register(
+pub async fn register(
     pool: &PgPool,
     credential: RegisterRequest,
 ) -> ShlossResult<RegisterResponse> {

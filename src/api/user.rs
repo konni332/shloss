@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::{
     crypto::{generate_api_key, hash_password, hash_secret},
-    db,
+    db::{self, Session},
     error::ShlossError,
     server::{AppState, AuthService},
 };
@@ -225,4 +225,20 @@ pub async fn api_change_username(
             StatusCode::INTERNAL_SERVER_ERROR
         }
     }
+}
+
+#[instrument(skip(state, _service))]
+pub async fn api_list_sessions(
+    State(state): State<AppState>,
+    _service: AuthService,
+    Path(user_id): Path<Uuid>,
+) -> Result<Json<Vec<Session>>, StatusCode> {
+    tracing::info!("listing sessions");
+    let sessions = Session::find_for_user(&state.pool, &user_id)
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, "error finding sessions for user");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    Ok(Json(sessions))
 }

@@ -4,4 +4,7 @@
 
 client_credentials.toml
 private.pem
+public.pem
+tests/test.pem
+tests/test_public.pem
 shloss.toml

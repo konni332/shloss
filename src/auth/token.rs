@@ -20,6 +20,7 @@ pub async fn validate_jwt(decoding_key: &DecodingKey, token: &str) -> ShlossResu
 
     let claims = decode::<Claims>(token, decoding_key, &validation)
         .map(|data| data.claims)
+        .map_err(|e| dbg!(e))
         .ok();
     Ok(claims.map(|c| c.sub))
 }

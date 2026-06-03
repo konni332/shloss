@@ -1,9 +1,13 @@
+use std::time::Duration;
+
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::{PgPool, prelude::FromRow};
 use uuid::Uuid;
 
 use crate::{crypto::generate_uuid, error::ShlossResult};
+
+const SESSION_TTL: Duration = Duration::from_hours(24 * 7);
 
 #[derive(Debug, Clone, FromRow, Serialize)]
 pub struct Session {
@@ -24,14 +28,16 @@ impl Session {
         user_agent: Option<String>,
     ) -> ShlossResult<Self> {
         let id = generate_uuid();
+        let expires_at = Utc::now() + SESSION_TTL;
         let session = sqlx::query_as!(
             Session,
-            r#"INSERT INTO sessions (id, user_id, ip_address, user_agent) VALUES ($1, $2, $3, $4) 
+            r#"INSERT INTO sessions (id, user_id, ip_address, user_agent, expires_at) VALUES ($1, $2, $3, $4, $5) 
             RETURNING id, user_id, ip_address, user_agent, created_at, expires_at, revoked_at"#,
             id,
             user_id,
             ip_address,
-            user_agent
+            user_agent,
+            expires_at,
         )
         .fetch_one(pool)
         .await?;
@@ -45,12 +51,28 @@ impl Session {
 
         Ok(())
     }
-    pub async fn revoke(pool: &PgPool, id: &Uuid) -> ShlossResult<bool> {
-        let rows = sqlx::query!("UPDATE sessions SET revoked_at = NOW() WHERE id = $1", id)
-            .execute(pool)
-            .await?
-            .rows_affected();
-        Ok(rows > 0)
+    pub async fn revoke(pool: &PgPool, id: &Uuid) -> ShlossResult<()> {
+        let id = sqlx::query_scalar!(
+            "UPDATE sessions SET revoked_at = NOW() WHERE id = $1 RETURNING id",
+            id
+        )
+        .fetch_one(pool)
+        .await?;
+
+        sqlx::query!(
+            "UPDATE opaque_tokens SET revoked_at = NOW() WHERE session_id = $1",
+            &id
+        )
+        .execute(pool)
+        .await?;
+        sqlx::query!(
+            "UPDATE refresh_tokens SET revoked_at = NOW() WHERE session_id = $1",
+            &id
+        )
+        .execute(pool)
+        .await?;
+
+        Ok(())
     }
     pub async fn find_for_user(pool: &PgPool, user_id: &Uuid) -> ShlossResult<Vec<Session>> {
         let sessions = sqlx::query_as!(
@@ -73,12 +95,28 @@ impl Session {
         Ok(count.unwrap_or(0) as usize)
     }
     pub async fn revoke_all_for_user(pool: &PgPool, user_id: &Uuid) -> ShlossResult<()> {
-        sqlx::query!(
-            "UPDATE sessions SET revoked_at = NOW() WHERE user_id = $1",
+        let ids = sqlx::query_scalar!(
+            "UPDATE sessions SET revoked_at = NOW() WHERE user_id = $1 RETURNING id",
             user_id
         )
-        .execute(pool)
+        .fetch_all(pool)
         .await?;
+
+        for id in ids {
+            sqlx::query!(
+                "UPDATE opaque_tokens SET revoked_at = NOW() WHERE session_id = $1",
+                &id
+            )
+            .execute(pool)
+            .await?;
+            sqlx::query!(
+                "UPDATE refresh_tokens SET revoked_at = NOW() WHERE session_id = $1",
+                &id
+            )
+            .execute(pool)
+            .await?;
+        }
+
         Ok(())
     }
 }

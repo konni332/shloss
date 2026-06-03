@@ -55,7 +55,7 @@ impl User {
     pub async fn get_from_api_key(pool: &PgPool, hash: &str) -> ShlossResult<Option<Self>> {
         let user = sqlx::query_as!(
             User,
-            "SELECT u.id, u.created_at, u.updated_at FROM users u JOIN api_keys a ON u.id = a.user_id WHERE a.hash = $1",
+            "SELECT u.id, u.created_at, u.updated_at FROM users u JOIN api_keys a ON u.id = a.user_id WHERE a.hash = $1 AND a.revoked_at IS NULL AND (a.expires_at IS NULL OR a.expires_at > NOW())",
             hash
         ).fetch_optional(pool).await?;
         Ok(user)
