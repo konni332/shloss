@@ -3,3 +3,5 @@
 .env
 
 client_credentials.toml
+private.pem
+shloss.toml

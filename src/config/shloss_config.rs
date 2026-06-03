@@ -39,8 +39,8 @@ impl ShlossConfig {
         let defaults = Self::default();
         Config::builder()
             .set_default("database_url", defaults.database_url)?
-            .set_default("credentials", vec!["api-key", "password"])?
-            .set_default("tokens", vec!["opague", "jwt"])?
+            .set_default("port", defaults.port.to_string())?
+            .set_default("host", defaults.host)?
             .add_source(config::File::with_name("shloss").required(false))
             .add_source(
                 config::Environment::with_prefix("SHLOSS")

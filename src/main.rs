@@ -48,7 +48,7 @@ async fn main() -> anyhow::Result<()> {
         jwks,
     };
 
-    let app = shloss::server::build_router(state);
+    let app = shloss::build_router(state);
     let listener =
         tokio::net::TcpListener::bind(&format!("{}:{}", config.host, config.port)).await?;
 

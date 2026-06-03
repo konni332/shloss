@@ -10,9 +10,9 @@ mod error;
 pub mod jwt;
 pub mod server;
 
-pub use config::{CredentialKind, ShlossConfig, TokenKind};
-
 pub use crate::config::ClientConfig;
+pub use api::build_router;
+pub use config::{CredentialKind, ShlossConfig, TokenKind};
 
 /// Initialize logging. This should only ever be called once, on program start
 pub fn init_logging() {
