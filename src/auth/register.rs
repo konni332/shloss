@@ -1,7 +1,7 @@
 use sqlx::PgPool;
 
 use crate::{
-    api::register::{RegisterRequest, RegisterResponse},
+    api::auth::register::{RegisterRequest, RegisterResponse},
     crypto::{generate_api_key, hash_password},
     db::{ApiKey, PasswordCredential, User},
     error::ShlossResult,

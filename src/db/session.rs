@@ -51,10 +51,11 @@ impl Session {
 
         Ok(())
     }
-    pub async fn revoke(pool: &PgPool, id: &Uuid) -> ShlossResult<()> {
+    pub async fn revoke(pool: &PgPool, id: &Uuid, user_id: &Uuid) -> ShlossResult<()> {
         let id = sqlx::query_scalar!(
-            "UPDATE sessions SET revoked_at = NOW() WHERE id = $1 RETURNING id",
-            id
+            "UPDATE sessions SET revoked_at = NOW() WHERE id = $1 AND user_id = $2 RETURNING id",
+            id,
+            user_id
         )
         .fetch_one(pool)
         .await?;
