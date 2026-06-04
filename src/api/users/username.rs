@@ -14,6 +14,7 @@ use crate::{
 };
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChangeUsernameRequest {
     new_username: String,
 }

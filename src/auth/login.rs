@@ -16,8 +16,11 @@ use crate::{
 };
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase", tag = "kind")]
 pub enum Credentials {
+    #[serde(rename = "password")]
     Password { username: String, password: String },
+    #[serde(rename = "api-key")]
     ApiKey { full_key: String },
 }
 
@@ -31,8 +34,11 @@ impl std::fmt::Display for Credentials {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase", tag = "kind")]
 pub enum TokenType {
+    #[serde(rename = "jwt")]
     Jwt { claims: HashMap<String, Value> },
+    #[serde(rename = "opaque")]
     Opaque { expires_at: DateTime<Utc> },
 }
 

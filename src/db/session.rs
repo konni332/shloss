@@ -10,13 +10,18 @@ use crate::{crypto::generate_uuid, error::ShlossResult};
 const SESSION_TTL: Duration = Duration::from_hours(24 * 7);
 
 #[derive(Debug, Clone, FromRow, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Session {
     pub(crate) id: Uuid,
     pub(crate) user_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) ip_address: Option<ipnetwork::IpNetwork>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) user_agent: Option<String>,
     pub(crate) created_at: DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) expires_at: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) revoked_at: Option<DateTime<Utc>>,
 }
 

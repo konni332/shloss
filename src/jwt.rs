@@ -38,11 +38,13 @@ pub fn verify_jwt(token: &str, decoding_key: &DecodingKey) -> Result<Claims, Cry
 }
 
 #[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Jwks {
     keys: Vec<Jwk>,
 }
 
 #[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Jwk {
     kty: String, // key type, always "RSA"
     alg: String, // always "RS256"

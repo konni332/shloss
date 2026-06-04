@@ -11,14 +11,18 @@ use crate::{
 };
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RefreshRequest {
     refresh_token: String,
     token_type: TokenType,
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase", tag = "status")]
 pub enum RefreshResponse {
+    #[serde(rename = "invalid")]
     Invalid,
+    #[serde(rename = "valid")]
     Valid {
         new_refresh: String,
         new_token: String,

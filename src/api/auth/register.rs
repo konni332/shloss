@@ -11,11 +11,11 @@ use crate::{
 };
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", tag = "kind")]
 pub enum RegisterRequest {
-    Password {
-        username: String,
-        password: String,
-    },
+    #[serde(rename = "password")]
+    Password { username: String, password: String },
+    #[serde(rename = "apiKey")]
     ApiKey {
         name: String,
         key_prefix: String,
@@ -23,8 +23,11 @@ pub enum RegisterRequest {
     },
 }
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase", tag = "kind")]
 pub enum RegisterResponse {
+    #[serde(rename = "password")]
     Password { user_id: Uuid },
+    #[serde(rename = "apiKey")]
     ApiKey { user_id: Uuid, raw_key: String },
 }
 

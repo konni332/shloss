@@ -33,13 +33,16 @@ pub async fn api_revoke_all_api_keys(
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AddApiKeyRequest {
     name: String,
     key_prefix: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     expires_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AddApiKeyResponse {
     key: String,
 }
@@ -73,6 +76,7 @@ pub async fn api_add_api_key(
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RevokeApiKeyRequest {
     key: String,
 }

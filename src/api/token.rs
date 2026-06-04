@@ -10,7 +10,9 @@ use crate::{
 
 #[derive(Deserialize)]
 enum TokenKind {
+    #[serde(rename = "jwt")]
     Jwt,
+    #[serde(rename = "opaque")]
     Opaque,
 }
 
@@ -24,14 +26,18 @@ impl std::fmt::Display for TokenKind {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TokenValidateRequest {
     token: String,
     kind: TokenKind,
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase", tag = "status")]
 pub enum TokenValidateResponse {
+    #[serde(rename = "invalid")]
     Invalid,
+    #[serde(rename = "valid")]
     Valid(Uuid),
 }
 

@@ -11,18 +11,24 @@ use crate::{
 };
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LoginRequest {
     credentials: Credentials,
+    #[serde(skip_serializing_if = "Option::is_none")]
     ip_address: Option<IpNetwork>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     user_agent: Option<String>,
     token_kind: TokenType,
-    refresh: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    refresh_expiry: Option<DateTime<Utc>>,
 }
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LoginResponse {
     user_id: Uuid,
     token: String,
-    refresh: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    refresh_token: Option<String>,
 }
 
 #[instrument(
@@ -30,7 +36,7 @@ pub struct LoginResponse {
     fields(
         credential_kind = %body.credentials,
         token_kind = %body.token_kind,
-        refresh = body.refresh.is_some()
+        refresh = body.refresh_expiry.is_some()
         )
     )]
 pub async fn api_login(
@@ -49,7 +55,7 @@ pub async fn api_login(
         user_agent: body.user_agent,
         token: body.token_kind,
         refresh: body
-            .refresh
+            .refresh_expiry
             .map(|expires_at| RefreshTokenRequest { expires_at }),
     };
 
@@ -69,6 +75,6 @@ pub async fn api_login(
             IssuedToken::Jwt(t) => t,
             IssuedToken::Opaque(t) => t,
         },
-        refresh: result.refresh_token,
+        refresh_token: result.refresh_token,
     }))
 }
