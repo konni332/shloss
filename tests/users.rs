@@ -75,9 +75,8 @@ async fn is_token_valid(app: &TestApp, token: &str) -> bool {
 #[tokio::test]
 async fn revoke_session_returns_200() {
     let app = TestApp::new().await;
-    register_and_get_user_id(&app, "sessionrevokeuser", "hunter2").await;
-    let (user_id, session_id) =
-        login_and_get_session_id(&app, "sessionrevokeuser", "hunter2").await;
+    let user_id = register_and_get_user_id(&app, "sessionrevokeuser", "hunter2").await;
+    let (_, session_id) = login_and_get_session_id(&app, "sessionrevokeuser", "hunter2").await;
     let service_token = app.service_token().await;
     app.server
         .delete(&format!("/v1/users/{user_id}/sessions/{}", session_id))
@@ -504,7 +503,7 @@ async fn add_expired_api_key_cannot_login() {
     let res: Value = app.server
         .post(&format!("/v1/users/{}/api-key", user_id))
         .add_header("Authorization", &service_token)
-        .json(&json!({ "userId": user_id, "name": "expiredkey", "keyPrefix": "test", "expires_at": "2000-01-01T00:00:00Z" }))
+        .json(&json!({ "userId": user_id, "name": "expiredkey", "keyPrefix": "test", "expiresAt": "2000-01-01T00:00:00Z" }))
         .await
         .assert_status_ok()
         .json();
@@ -516,7 +515,7 @@ async fn add_expired_api_key_cannot_login() {
             "credentials": { "kind": "apiKey", "fullKey": key },
             "ipAddress": null,
             "userAgent": null,
-            "tokenKind": { "kind": "opaque", "expiresAt": "1999-01-01T00:00:00Z" },
+            "tokenKind": { "kind": "opaque", "expiresAt": "2099-01-01T00:00:00Z" },
             "refreshExpiry": null
         }))
         .await
@@ -540,7 +539,7 @@ async fn revoke_api_key_prevents_login() {
     let service_token = app.service_token().await;
     let res: Value = app
         .server
-        .delete(&format!("/v1/users/{}/api-key", user_id))
+        .post(&format!("/v1/users/{}/api-key", user_id))
         .add_header("Authorization", &service_token)
         .json(
             &json!({ "userId": user_id, "name": "mykey", "keyPrefix": "prod", "expiresAt": null }),
