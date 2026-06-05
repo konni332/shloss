@@ -37,8 +37,8 @@ pub struct TokenValidateRequest {
 pub enum TokenValidateResponse {
     #[serde(rename = "invalid")]
     Invalid,
-    #[serde(rename = "valid")]
-    Valid(Uuid),
+    #[serde(rename = "valid", rename_all = "camelCase")]
+    Valid { user_id: Uuid },
 }
 
 #[instrument(skip(state, _service, body), fields(token_kind = %body.kind))]
@@ -68,5 +68,5 @@ pub async fn api_validate_token(
         return Ok(Json(TokenValidateResponse::Invalid));
     };
     tracing::info!("token valid");
-    Ok(Json(TokenValidateResponse::Valid(user_id)))
+    Ok(Json(TokenValidateResponse::Valid { user_id }))
 }

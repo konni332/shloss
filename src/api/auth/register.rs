@@ -13,9 +13,9 @@ use crate::{
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "kind")]
 pub enum RegisterRequest {
-    #[serde(rename = "password")]
+    #[serde(rename = "password", rename_all = "camelCase")]
     Password { username: String, password: String },
-    #[serde(rename = "apiKey")]
+    #[serde(rename = "apiKey", rename_all = "camelCase")]
     ApiKey {
         name: String,
         key_prefix: String,
@@ -25,9 +25,9 @@ pub enum RegisterRequest {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase", tag = "kind")]
 pub enum RegisterResponse {
-    #[serde(rename = "password")]
+    #[serde(rename = "password", rename_all = "camelCase")]
     Password { user_id: Uuid },
-    #[serde(rename = "apiKey")]
+    #[serde(rename = "apiKey", rename_all = "camelCase")]
     ApiKey { user_id: Uuid, raw_key: String },
 }
 

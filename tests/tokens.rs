@@ -17,11 +17,11 @@ async fn validate_valid_opaque_token_returns_user_id() {
         .server
         .post("/v1/tokens/validate")
         .add_header("Authorization", &service_token)
-        .json(&json!({ "token": token, "kind": "Opaque" }))
+        .json(&json!({ "token": token, "kind": "opaque" }))
         .await
         .assert_status_ok()
         .json();
-    assert_eq!(res["Valid"].as_str().unwrap(), user_id);
+    assert_eq!(res["userId"].as_str().unwrap(), user_id);
 }
 
 #[tokio::test]
@@ -32,11 +32,11 @@ async fn validate_invalid_opaque_token_returns_invalid() {
         .server
         .post("/v1/tokens/validate")
         .add_header("Authorization", &service_token)
-        .json(&json!({ "token": "totallyinvalidtoken", "kind": "Opaque" }))
+        .json(&json!({ "token": "totallyinvalidtoken", "kind": "opaque" }))
         .await
         .assert_status_ok()
         .json();
-    assert_eq!(res, json!("Invalid"));
+    assert_eq!(res, json!({"status": "invalid"}));
 }
 
 #[tokio::test]
@@ -46,14 +46,14 @@ async fn validate_expired_opaque_token_returns_invalid() {
     register_password_user(&app, "expireduser", "hunter2").await;
     let login: Value = app
         .server
-        .post("/v1/users/login")
+        .post("/v1/auth/login")
         .add_header("Authorization", &service_token)
         .json(&json!({
-            "credentials": { "Password": { "username": "expireduser", "password": "hunter2" } },
-            "ip_address": null,
-            "user_agent": null,
-            "token_kind": { "Opaque": { "expires_at": "2000-01-01T00:00:00Z" } },
-            "refresh": null
+            "credentials": { "kind": "password", "username": "expireduser", "password": "hunter2" },
+            "ipAddress": null,
+            "userAgent": null,
+            "tokenKind": { "kind": "opaque", "expiresAt": "2000-01-01T00:00:00Z" },
+            "refreshExpiry": null
         }))
         .await
         .assert_status_ok()
@@ -63,11 +63,11 @@ async fn validate_expired_opaque_token_returns_invalid() {
         .server
         .post("/v1/tokens/validate")
         .add_header("Authorization", &service_token)
-        .json(&json!({ "token": expired_token, "kind": "Opaque" }))
+        .json(&json!({ "token": expired_token, "kind": "opaque" }))
         .await
         .assert_status_ok()
         .json();
-    assert_eq!(res, json!("Invalid"));
+    assert_eq!(res, json!({"status": "invalid"}));
 }
 
 #[tokio::test]
@@ -89,11 +89,11 @@ async fn validate_revoked_opaque_token_returns_invalid() {
         .server
         .post("/v1/tokens/validate")
         .add_header("Authorization", &service_token)
-        .json(&json!({ "token": token, "kind": "Opaque" }))
+        .json(&json!({ "token": token, "kind": "opaque" }))
         .await
         .assert_status_ok()
         .json();
-    assert_eq!(res, json!("Invalid"));
+    assert_eq!(res, json!({"status": "invalid"}));
 }
 
 #[tokio::test]
@@ -101,17 +101,17 @@ async fn validate_valid_jwt_returns_user_id() {
     let app = TestApp::new().await;
     let service_token = app.service_token().await;
     let reg: Value = register_password_user(&app, "jwtvalidateuser", "hunter2").await;
-    let expected_user_id = reg["Password"]["user_id"].as_str().unwrap();
+    let expected_user_id = reg["userId"].as_str().unwrap();
     let login: Value = app
         .server
-        .post("/v1/users/login")
+        .post("/v1/auth/login")
         .add_header("Authorization", &service_token)
         .json(&json!({
-            "credentials": { "Password": { "username": "jwtvalidateuser", "password": "hunter2" } },
-            "ip_address": null,
-            "user_agent": null,
-            "token_kind": { "Jwt": { "claims": { "exp": 9999999999i64 } } },
-            "refresh": null
+            "credentials": { "kind": "password", "username": "jwtvalidateuser", "password": "hunter2" },
+            "ipAddress": null,
+            "userAgent": null,
+            "tokenKind": { "kind": "jwt", "claims": { "exp": 9999999999i64 } },
+            "refreshExpiry": null
         }))
         .await
         .assert_status_ok()
@@ -121,11 +121,11 @@ async fn validate_valid_jwt_returns_user_id() {
         .server
         .post("/v1/tokens/validate")
         .add_header("Authorization", &service_token)
-        .json(&json!({ "token": jwt, "kind": "Jwt" }))
+        .json(&json!({ "token": jwt, "kind": "jwt" }))
         .await
         .assert_status_ok()
         .json();
-    assert_eq!(res["Valid"].as_str().unwrap(), expected_user_id);
+    assert_eq!(res["userId"].as_str().unwrap(), expected_user_id);
 }
 
 #[tokio::test]
@@ -136,11 +136,11 @@ async fn validate_invalid_jwt_returns_invalid() {
         .server
         .post("/v1/tokens/validate")
         .add_header("Authorization", &service_token)
-        .json(&json!({ "token": "not.a.jwt", "kind": "Jwt" }))
+        .json(&json!({ "token": "not.a.jwt", "kind": "jwt" }))
         .await
         .assert_status_ok()
         .json();
-    assert_eq!(res, json!("Invalid"));
+    assert_eq!(res, json!({"status": "invalid"}));
 }
 
 #[tokio::test]
@@ -148,7 +148,7 @@ async fn validate_requires_service_auth() {
     let app = TestApp::new().await;
     app.server
         .post("/v1/tokens/validate")
-        .json(&json!({ "token": "sometoken", "kind": "Opaque" }))
+        .json(&json!({ "token": "sometoken", "kind": "opaque" }))
         .await
         .assert_status(StatusCode::UNAUTHORIZED);
 }
@@ -164,17 +164,18 @@ async fn refresh_valid_token_returns_new_opaque_and_refresh() {
         .await;
     let res: Value = app
         .server
-        .post("/v1/tokens/refresh")
+        .post("/v1/auth/refresh")
         .add_header("Authorization", &service_token)
         .json(&json!({
-            "refresh_token": refresh,
-            "token_type": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } }
+            "refreshToken": refresh,
+            "tokenType": { "kind": "opaque", "expiresAt": "2099-01-01T00:00:00Z" }
         }))
         .await
         .assert_status_ok()
         .json();
-    assert!(res["Valid"]["new_token"].as_str().is_some());
-    assert!(res["Valid"]["new_refresh"].as_str().is_some());
+    assert_eq!(res["status"], "valid");
+    assert!(res["newToken"].as_str().is_some());
+    assert!(res["newRefresh"].as_str().is_some());
 }
 
 #[tokio::test]
@@ -186,19 +187,19 @@ async fn refresh_valid_token_returns_new_jwt_and_refresh() {
         .await;
     let res: Value = app
         .server
-        .post("/v1/tokens/refresh")
+        .post("/v1/auth/refresh")
         .add_header("Authorization", &service_token)
         .json(&json!({
-            "refresh_token": refresh,
-            "token_type": { "Jwt": { "claims": { "exp": 9999999999i64 } } }
+            "refreshToken": refresh,
+            "tokenType": { "kind": "jwt", "claims": { "exp": 9999999999i64 } }
         }))
         .await
         .assert_status_ok()
         .json();
     dbg!(&res);
-    let new_token = res["Valid"]["new_token"].as_str().unwrap();
+    let new_token = res["newToken"].as_str().unwrap();
     assert_eq!(new_token.split('.').count(), 3, "expected a valid JWT");
-    assert!(res["Valid"]["new_refresh"].as_str().is_some());
+    assert!(res["newRefresh"].as_str().is_some());
 }
 
 #[tokio::test]
@@ -210,27 +211,27 @@ async fn refresh_replay_attack_returns_invalid() {
         .await;
     // use the refresh token once
     app.server
-        .post("/v1/tokens/refresh")
+        .post("/v1/auth/refresh")
         .add_header("Authorization", &service_token)
         .json(&json!({
-            "refresh_token": refresh,
-            "token_type": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } }
+            "refreshToken": refresh,
+            "tokenType": { "kind": "opaque", "expiresAt": "2099-01-01T00:00:00Z" }
         }))
         .await
         .assert_status_ok();
     // replay the same refresh token
     let res: Value = app
         .server
-        .post("/v1/tokens/refresh")
+        .post("/v1/auth/refresh")
         .add_header("Authorization", &service_token)
         .json(&json!({
-            "refresh_token": refresh,
-            "token_type": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } }
+            "refreshToken": refresh,
+            "tokenType": { "kind": "opaque", "expiresAt": "2099-01-01T00:00:00Z" }
         }))
         .await
         .assert_status_ok()
         .json();
-    assert_eq!(res, json!("Invalid"));
+    assert_eq!(res, json!({ "status": "invalid" }));
 }
 
 #[tokio::test]
@@ -239,31 +240,31 @@ async fn refresh_expired_token_returns_invalid() {
     let service_token = app.service_token().await;
     register_password_user(&app, "expiredrefreshuser", "hunter2").await;
     let login: Value = app.server
-        .post("/v1/users/login")
+        .post("/v1/auth/login")
         .add_header("Authorization", &service_token)
         .json(&json!({
-            "credentials": { "Password": { "username": "expiredrefreshuser", "password": "hunter2" } },
-            "ip_address": null,
-            "user_agent": null,
-            "token_kind": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } },
-            "refresh": "2000-01-01T00:00:00Z"
+            "credentials": { "kind": "password",  "username": "expiredrefreshuser", "password": "hunter2" },
+            "ipAddress": null,
+            "userAgent": null,
+            "tokenKind": { "kind": "opaque", "expiresAt": "2099-01-01T00:00:00Z" },
+            "refreshExpiry": "2000-01-01T00:00:00Z"
         }))
         .await
         .assert_status_ok()
         .json();
-    let refresh = login["refresh"].as_str().unwrap();
+    let refresh = login["refreshToken"].as_str().unwrap();
     let res: Value = app
         .server
-        .post("/v1/tokens/refresh")
+        .post("/v1/auth/refresh")
         .add_header("Authorization", &service_token)
         .json(&json!({
-            "refresh_token": refresh,
-            "token_type": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } }
+            "refreshToken": refresh,
+            "tokenType": { "kind": "opaque", "expiresAt": "2099-01-01T00:00:00Z" }
         }))
         .await
         .assert_status_ok()
         .json();
-    assert_eq!(res, json!("Invalid"));
+    assert_eq!(res, json!({ "status": "invalid" }));
 }
 
 #[tokio::test]
@@ -282,16 +283,16 @@ async fn refresh_revoked_token_returns_invalid() {
     .unwrap();
     let res: Value = app
         .server
-        .post("/v1/tokens/refresh")
+        .post("/v1/auth/refresh")
         .add_header("Authorization", &service_token)
         .json(&json!({
-            "refresh_token": refresh,
-            "token_type": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } }
+            "refreshToken": refresh,
+            "tokenType": { "kind": "opaque", "expiresAt": "2099-01-01T00:00:00Z" }
         }))
         .await
         .assert_status_ok()
         .json();
-    assert_eq!(res, json!("Invalid"));
+    assert_eq!(res, json!({ "status": "invalid" }));
 }
 
 #[tokio::test]
@@ -300,26 +301,26 @@ async fn refresh_invalid_token_returns_invalid() {
     let service_token = app.service_token().await;
     let res: Value = app
         .server
-        .post("/v1/tokens/refresh")
+        .post("/v1/auth/refresh")
         .add_header("Authorization", &service_token)
         .json(&json!({
-            "refresh_token": "totallyinvalidrefreshtoken",
-            "token_type": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } }
+            "refreshToken": "totallyinvalidrefreshtoken",
+            "tokenType": { "kind": "opaque", "expiresAt": "2099-01-01T00:00:00Z" }
         }))
         .await
         .assert_status_ok()
         .json();
-    assert_eq!(res, json!("Invalid"));
+    assert_eq!(res, json!({ "status": "invalid" }));
 }
 
 #[tokio::test]
 async fn refresh_requires_service_auth() {
     let app = TestApp::new().await;
     app.server
-        .post("/v1/tokens/refresh")
+        .post("/v1/auth/refresh")
         .json(&json!({
-            "refresh_token": "sometoken",
-            "token_type": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } }
+            "refreshToken": "sometoken",
+            "tokenType": { "kind": "opaque", "expires_at": "2099-01-01T00:00:00Z" }
         }))
         .await
         .assert_status(StatusCode::UNAUTHORIZED);

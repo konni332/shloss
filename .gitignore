@@ -1,6 +1,7 @@
 /target
 
 .env
+.env.test
 
 client_credentials.toml
 private.pem

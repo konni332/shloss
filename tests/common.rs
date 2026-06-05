@@ -16,10 +16,10 @@ pub struct TestApp {
 pub async fn register_password_user(app: &TestApp, username: &str, password: &str) -> Value {
     let token = app.service_token().await;
     app.server
-        .post("/v1/users/register")
+        .post("/v1/auth/register")
         .add_header("Authorization", &token)
         .json(&json!({
-            "Password": { "username": username, "password": password }
+            "kind": "password", "username": username, "password": password
         }))
         .await
         .assert_status_ok()
@@ -87,8 +87,8 @@ impl TestApp {
     pub async fn service_token(&self) -> String {
         let res = self
             .server
-            .post("/v1/services/login")
-            .json(&json!({ "raw_key": TEST_SERVICE_KEY }))
+            .post("/v1/auth/service")
+            .json(&json!({ "rawKey": TEST_SERVICE_KEY }))
             .await;
         res.assert_status_ok();
         let body: Value = res.json();
@@ -101,18 +101,18 @@ impl TestApp {
         password: &str,
     ) -> (String, String) {
         let reg: Value = register_password_user(self, username, password).await;
-        let user_id = reg["Password"]["user_id"].as_str().unwrap().to_string();
+        let user_id = reg["userId"].as_str().unwrap().to_string();
         let service_token = self.service_token().await;
         let login: Value = self
             .server
-            .post("/v1/users/login")
+            .post("/v1/auth/login")
             .add_header("Authorization", &service_token)
             .json(&json!({
-                "credentials": { "Password": { "username": username, "password": password } },
-                "ip_address": null,
-                "user_agent": null,
-                "token_kind": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } },
-                "refresh": null
+                "credentials": { "kind": "password", "username": username, "password": password },
+                "ipAddress": null,
+                "userAgent": null,
+                "tokenKind": { "kind": "opaque", "expiresAt": "2099-01-01T00:00:00Z" },
+                "refreshExpiry": null
             }))
             .await
             .assert_status_ok()
@@ -130,21 +130,21 @@ impl TestApp {
         let service_token = self.service_token().await;
         let login: Value = self
             .server
-            .post("/v1/users/login")
+            .post("/v1/auth/login")
             .add_header("Authorization", &service_token)
             .json(&json!({
-                "credentials": { "Password": { "username": username, "password": password } },
-                "ip_address": null,
-                "user_agent": null,
-                "token_kind": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } },
-                "refresh": "2099-06-01T00:00:00Z"
+                "credentials": { "kind": "password", "username": username, "password": password },
+                "ipAddress": null,
+                "userAgent": null,
+                "tokenKind": { "kind": "opaque", "expiresAt": "2099-01-01T00:00:00Z" },
+                "refreshExpiry": "2099-06-01T00:00:00Z"
             }))
             .await
             .assert_status_ok()
             .json();
         (
             login["token"].as_str().unwrap().to_string(),
-            login["refresh"].as_str().unwrap().to_string(),
+            login["refreshToken"].as_str().unwrap().to_string(),
         )
     }
 }

@@ -11,14 +11,14 @@ use crate::common::register_password_user;
 async fn login_opaque(app: &TestApp, username: &str, password: &str, expires_at: &str) -> Value {
     let token = app.service_token().await;
     app.server
-        .post("/v1/users/login")
+        .post("/v1/auth/login")
         .add_header("Authorization", &token)
         .json(&json!({
-            "credentials": { "Password": { "username": username, "password": password } },
-            "ip_address": null,
-            "user_agent": null,
-            "token_kind": { "Opaque": { "expires_at": expires_at } },
-            "refresh": null
+            "credentials": { "kind": "password", "username": username, "password": password },
+            "ipAddress": null,
+            "userAgent": null,
+            "tokenKind": { "kind": "opaque", "expiresAt": expires_at },
+            "refreshExpiry": null
         }))
         .await
         .assert_status_ok()
@@ -32,8 +32,8 @@ async fn service_login_valid_key_returns_token() {
     let app = TestApp::new().await;
     let res = app
         .server
-        .post("/v1/services/login")
-        .json(&json!({ "raw_key": "shloss_testkey" }))
+        .post("/v1/auth/service")
+        .json(&json!({ "rawKey": "shloss_testkey" }))
         .await;
     res.assert_status_ok();
     let body: Value = res.json();
@@ -47,8 +47,8 @@ async fn service_login_valid_key_returns_token() {
 async fn service_login_invalid_key_returns_401() {
     let app = TestApp::new().await;
     app.server
-        .post("/v1/services/login")
-        .json(&json!({ "raw_key": "shloss_wrongkey" }))
+        .post("/v1/auth/service")
+        .json(&json!({ "rawKey": "shloss_wrongkey" }))
         .await
         .assert_status(StatusCode::UNAUTHORIZED);
 }
@@ -57,8 +57,8 @@ async fn service_login_invalid_key_returns_401() {
 async fn service_login_malformed_body_returns_422() {
     let app = TestApp::new().await;
     app.server
-        .post("/v1/services/login")
-        .json(&json!({ "wrong_field": "shloss_testkey" }))
+        .post("/v1/auth/service")
+        .json(&json!({ "wrongField": "shloss_testkey" }))
         .await
         .assert_status(StatusCode::UNPROCESSABLE_ENTITY);
 }
@@ -68,9 +68,9 @@ async fn service_token_is_usable_for_protected_routes() {
     let app = TestApp::new().await;
     let token = app.service_token().await;
     app.server
-        .post("/v1/users/register")
+        .post("/v1/auth/register")
         .add_header("Authorization", &token)
-        .json(&json!({ "Password": { "username": "tokentest", "password": "hunter2" } }))
+        .json(&json!({ "kind": "password", "username": "tokentest", "password": "hunter2"  }))
         .await
         .assert_status_ok();
 }
@@ -92,9 +92,9 @@ async fn expired_service_token_returns_401() {
         });
     }
     app.server
-        .post("/v1/users/register")
+        .post("/v1/auth/register")
         .add_header("Authorization", "Bearer expiredtoken")
-        .json(&json!({ "Password": { "username": "test", "password": "test" } }))
+        .json(&json!({ "kind": "password",  "username": "test", "password": "test"  }))
         .await
         .assert_status(StatusCode::UNAUTHORIZED);
 }
@@ -105,7 +105,7 @@ async fn expired_service_token_returns_401() {
 async fn register_password_user_returns_user_id() {
     let app = TestApp::new().await;
     let body = register_password_user(&app, "newuser", "hunter2").await;
-    assert!(body["Password"]["user_id"].as_str().is_some());
+    assert!(body["userId"].as_str().is_some());
 }
 
 #[tokio::test]
@@ -114,21 +114,20 @@ async fn register_api_key_user_returns_user_id_and_key() {
     let token = app.service_token().await;
     let res = app
         .server
-        .post("/v1/users/register")
+        .post("/v1/auth/register")
         .add_header("Authorization", &token)
         .json(&json!({
-            "ApiKey": {
-                "name": "mykey",
-                "key_prefix": "prod",
-                "expires_at": null
-            }
+            "kind": "apiKey",
+            "name": "mykey",
+            "keyPrefix": "prod",
+            "expiresAt": null
         }))
         .await;
     res.assert_status_ok();
     let body: Value = res.json();
-    assert!(body["ApiKey"]["user_id"].as_str().is_some());
-    assert!(body["ApiKey"]["raw_key"].as_str().is_some());
-    let raw_key = body["ApiKey"]["raw_key"].as_str().unwrap();
+    assert!(body["userId"].as_str().is_some());
+    assert!(body["rawKey"].as_str().is_some());
+    let raw_key = body["rawKey"].as_str().unwrap();
     assert!(raw_key.starts_with("prod_"), "key should start with prefix");
 }
 
@@ -138,9 +137,9 @@ async fn register_duplicate_username_returns_conflict() {
     register_password_user(&app, "dupeuser", "hunter2").await;
     let token = app.service_token().await;
     app.server
-        .post("/v1/users/register")
+        .post("/v1/auth/register")
         .add_header("Authorization", &token)
-        .json(&json!({ "Password": { "username": "dupeuser", "password": "different" } }))
+        .json(&json!({ "kind": "password", "username": "dupeuser", "password": "different"  }))
         .await
         .assert_status(StatusCode::CONFLICT);
 }
@@ -149,8 +148,8 @@ async fn register_duplicate_username_returns_conflict() {
 async fn register_without_service_token_returns_401() {
     let app = TestApp::new().await;
     app.server
-        .post("/v1/users/register")
-        .json(&json!({ "Password": { "username": "test", "password": "hunter2" } }))
+        .post("/v1/auth/register")
+        .json(&json!({ "kind": "password", "username": "test", "password": "hunter2"  }))
         .await
         .assert_status(StatusCode::UNAUTHORIZED);
 }
@@ -159,9 +158,9 @@ async fn register_without_service_token_returns_401() {
 async fn register_with_invalid_service_token_returns_401() {
     let app = TestApp::new().await;
     app.server
-        .post("/v1/users/register")
+        .post("/v1/auth/register")
         .add_header("Authorization", "Bearer invalidtoken")
-        .json(&json!({ "Password": { "username": "test", "password": "hunter2" } }))
+        .json(&json!({ "kind": "password", "username": "test", "password": "hunter2"  }))
         .await
         .assert_status(StatusCode::UNAUTHORIZED);
 }
@@ -171,7 +170,7 @@ async fn register_malformed_body_returns_422() {
     let app = TestApp::new().await;
     let token = app.service_token().await;
     app.server
-        .post("/v1/users/register")
+        .post("/v1/auth/register")
         .add_header("Authorization", &token)
         .json(&json!({ "wrong": "shape" }))
         .await
@@ -184,34 +183,34 @@ async fn register_malformed_body_returns_422() {
 async fn login_valid_password_returns_opaque_token_and_user_id() {
     let app = TestApp::new().await;
     let reg: Value = register_password_user(&app, "loginuser", "hunter2").await;
-    let expected_user_id = reg["Password"]["user_id"].as_str().unwrap();
+    let expected_user_id = reg["userId"].as_str().unwrap();
     let body = login_opaque(&app, "loginuser", "hunter2", "2099-01-01T00:00:00Z").await;
     assert!(body["token"].as_str().is_some());
-    assert_eq!(body["user_id"].as_str().unwrap(), expected_user_id);
+    assert_eq!(body["userId"].as_str().unwrap(), expected_user_id);
 }
 
 #[tokio::test]
 async fn login_valid_password_returns_jwt_and_user_id() {
     let app = TestApp::new().await;
     let reg: Value = register_password_user(&app, "jwtuser", "hunter2").await;
-    let expected_user_id = reg["Password"]["user_id"].as_str().unwrap();
+    let expected_user_id = reg["userId"].as_str().unwrap();
     let token = app.service_token().await;
     let res = app
         .server
-        .post("/v1/users/login")
+        .post("/v1/auth/login")
         .add_header("Authorization", &token)
         .json(&json!({
-            "credentials": { "Password": { "username": "jwtuser", "password": "hunter2" } },
-            "ip_address": null,
-            "user_agent": null,
-            "token_kind": { "Jwt": { "claims": { "exp": 9999999999i64 } } },
-            "refresh": null
+            "credentials": { "kind": "password", "username": "jwtuser", "password": "hunter2"  },
+            "ipAddress": null,
+            "userAgent": null,
+            "tokenKind": { "kind": "jwt", "claims": { "exp": 9999999999i64 } },
+            "refreshExpiry": null
         }))
         .await;
     res.assert_status_ok();
     let body: Value = res.json();
     assert!(body["token"].as_str().is_some());
-    assert_eq!(body["user_id"].as_str().unwrap(), expected_user_id);
+    assert_eq!(body["userId"].as_str().unwrap(), expected_user_id);
     // JWT should have 3 dot-separated parts
     let jwt = body["token"].as_str().unwrap();
     assert_eq!(jwt.split('.').count(), 3, "expected a valid JWT");
@@ -224,20 +223,20 @@ async fn login_with_refresh_token_requested() {
     let token = app.service_token().await;
     let res = app
         .server
-        .post("/v1/users/login")
+        .post("/v1/auth/login")
         .add_header("Authorization", &token)
         .json(&json!({
-            "credentials": { "Password": { "username": "refreshuser", "password": "hunter2" } },
-            "ip_address": null,
-            "user_agent": null,
-            "token_kind": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } },
-            "refresh": "2099-06-01T00:00:00Z"
+            "credentials": { "kind": "password",  "username": "refreshuser", "password": "hunter2" },
+            "ipAddress": null,
+            "userAgent": null,
+            "tokenKind": { "kind": "opaque", "expiresAt": "2099-01-01T00:00:00Z" },
+            "refreshExpiry": "2099-06-01T00:00:00Z"
         }))
         .await;
     res.assert_status_ok();
     let body: Value = res.json();
     assert!(body["token"].as_str().is_some());
-    assert!(body["refresh"].as_str().is_some());
+    assert!(body["refreshToken"].as_str().is_some());
 }
 
 #[tokio::test]
@@ -246,14 +245,14 @@ async fn login_wrong_password_returns_401() {
     register_password_user(&app, "wrongpassuser", "correct").await;
     let token = app.service_token().await;
     app.server
-        .post("/v1/users/login")
+        .post("/v1/auth/login")
         .add_header("Authorization", &token)
         .json(&json!({
-            "credentials": { "Password": { "username": "wrongpassuser", "password": "wrong" } },
-            "ip_address": null,
-            "user_agent": null,
-            "token_kind": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } },
-            "refresh": null
+            "credentials": { "kind": "password",  "username": "wrongpassuser", "password": "wrong" },
+            "ipAddress": null,
+            "userAgent": null,
+            "tokenKind": { "kind": "opaque", "expiresAt": "2099-01-01T00:00:00Z" },
+            "refreshExpiry": null
         }))
         .await
         .assert_status(StatusCode::UNAUTHORIZED);
@@ -264,14 +263,14 @@ async fn login_nonexistent_user_returns_401() {
     let app = TestApp::new().await;
     let token = app.service_token().await;
     app.server
-        .post("/v1/users/login")
+        .post("/v1/auth/login")
         .add_header("Authorization", &token)
         .json(&json!({
-            "credentials": { "Password": { "username": "doesnotexist", "password": "hunter2" } },
-            "ip_address": null,
-            "user_agent": null,
-            "token_kind": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } },
-            "refresh": null
+            "credentials": { "kind": "password",  "username": "doesnotexist", "password": "hunter2" },
+            "ipAddress": null,
+            "userAgent": null,
+            "tokenKind": { "kind": "opaque", "expiresAt": "2099-01-01T00:00:00Z" },
+            "refreshExpiry": null
         }))
         .await
         .assert_status(StatusCode::UNAUTHORIZED);
@@ -285,27 +284,27 @@ async fn login_nonexistent_and_wrong_password_return_same_status() {
     let token = app.service_token().await;
     let wrong_pass = app
         .server
-        .post("/v1/users/login")
+        .post("/v1/auth/login")
         .add_header("Authorization", &token)
         .json(&json!({
-            "credentials": { "Password": { "username": "existinguser", "password": "wrong" } },
-            "ip_address": null,
-            "user_agent": null,
-            "token_kind": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } },
-            "refresh": null
+            "credentials": { "kind": "password",  "username": "existinguser", "password": "wrong" },
+            "ipAddress": null,
+            "userAgent": null,
+            "tokenKind": { "opaque": { "expiresAt": "2099-01-01T00:00:00Z" } },
+            "refreshExpiry": null
         }))
         .await
         .status_code();
     let no_user = app
         .server
-        .post("/v1/users/login")
+        .post("/v1/auth/login")
         .add_header("Authorization", &token)
         .json(&json!({
-            "credentials": { "Password": { "username": "nosuchuser", "password": "wrong" } },
-            "ip_address": null,
-            "user_agent": null,
-            "token_kind": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } },
-            "refresh": null
+            "credentials": { "kind": "password", "username": "nosuchuser", "password": "wrong" },
+            "ipAddress": null,
+            "userAgent": null,
+            "tokenKind": { "opaque": { "expiresAt": "2099-01-01T00:00:00Z" } },
+            "refreshExpiry": null
         }))
         .await
         .status_code();
@@ -321,24 +320,24 @@ async fn login_with_api_key_credential() {
     let token = app.service_token().await;
     let reg: Value = app
         .server
-        .post("/v1/users/register")
+        .post("/v1/auth/register")
         .add_header("Authorization", &token)
         .json(&json!({
-            "ApiKey": { "name": "mykey", "key_prefix": "test", "expires_at": null }
+            "kind": "apiKey", "name": "mykey", "keyPrefix": "test", "expiresAt": null
         }))
         .await
         .assert_status_ok()
         .json();
-    let raw_key = reg["ApiKey"]["raw_key"].as_str().unwrap();
+    let raw_key = reg["rawKey"].as_str().unwrap();
     app.server
-        .post("/v1/users/login")
+        .post("/v1/auth/login")
         .add_header("Authorization", &token)
         .json(&json!({
-            "credentials": { "ApiKey": { "full_key": raw_key } },
-            "ip_address": null,
-            "user_agent": null,
-            "token_kind": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } },
-            "refresh": null
+            "credentials": { "kind": "apiKey", "fullKey": raw_key },
+            "ipAddress": null,
+            "userAgent": null,
+            "tokenKind": { "kind": "opaque", "expiresAt": "2099-01-01T00:00:00Z" },
+            "refreshExpiry": null
         }))
         .await
         .assert_status_ok();
@@ -349,14 +348,14 @@ async fn login_with_invalid_api_key_returns_401() {
     let app = TestApp::new().await;
     let token = app.service_token().await;
     app.server
-        .post("/v1/users/login")
+        .post("/v1/auth/login")
         .add_header("Authorization", &token)
         .json(&json!({
-            "credentials": { "ApiKey": { "full_key": "test_totallyinvalidkey" } },
-            "ip_address": null,
-            "user_agent": null,
-            "token_kind": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } },
-            "refresh": null
+            "credentials": { "kind": "apiKey",   "fullKey": "test_totallyinvalidkey" },
+            "ipAddress": null,
+            "userAgent": null,
+            "tokenKind": { "kind": "opaque", "expiresAt": "2099-01-01T00:00:00Z" },
+            "refreshExpiry": null
         }))
         .await
         .assert_status(StatusCode::UNAUTHORIZED);
@@ -368,15 +367,16 @@ async fn login_with_expired_opaque_token_request() {
     let app = TestApp::new().await;
     register_password_user(&app, "expiredtokenuser", "hunter2").await;
     let token = app.service_token().await;
+    let past = Utc::now() - chrono::Duration::days(1);
     let login: Value = app.server
-        .post("/v1/users/login")
+        .post("/v1/auth/login")
         .add_header("Authorization", &token)
         .json(&json!({
-            "credentials": { "Password": { "username": "expiredtokenuser", "password": "hunter2" } },
-            "ip_address": null,
-            "user_agent": null,
-            "token_kind": { "Opaque": { "expires_at": "2000-01-01T00:00:00Z" } },
-            "refresh": null
+            "credentials": { "kind": "password", "username": "expiredtokenuser", "password": "hunter2" },
+            "ipAddress": null,
+            "userAgent": null,
+            "tokenKind": { "kind": "opaque", "expiresAt": past },
+            "refreshExpiry": null
         }))
         .await
         .assert_status_ok()
@@ -387,24 +387,24 @@ async fn login_with_expired_opaque_token_request() {
         .server
         .post("/v1/tokens/validate")
         .add_header("Authorization", &token)
-        .json(&json!({ "token": opaque, "kind": "Opaque" }))
+        .json(&json!({ "token": opaque, "kind": "opaque" }))
         .await
         .assert_status_ok()
         .json();
-    assert_eq!(res, json!("Invalid"));
+    assert_eq!(res, json!({"status": "invalid"}));
 }
 
 #[tokio::test]
 async fn login_without_service_token_returns_401() {
     let app = TestApp::new().await;
     app.server
-        .post("/v1/users/login")
+        .post("/v1/auth/login")
         .json(&json!({
-            "credentials": { "Password": { "username": "test", "password": "test" } },
-            "ip_address": null,
-            "user_agent": null,
-            "token_kind": { "Opaque": { "expires_at": "2099-01-01T00:00:00Z" } },
-            "refresh": null
+            "credentials": { "kind": "password", "username": "test", "password": "test" },
+            "ipAddress": null,
+            "userAgent": null,
+            "tokenKind": { "kind": "opaque", "expiresAt": "2099-01-01T00:00:00Z" },
+            "refreshExpiry": null
         }))
         .await
         .assert_status(StatusCode::UNAUTHORIZED);
@@ -415,7 +415,7 @@ async fn login_malformed_body_returns_422() {
     let app = TestApp::new().await;
     let token = app.service_token().await;
     app.server
-        .post("/v1/users/login")
+        .post("/v1/auth/login")
         .add_header("Authorization", &token)
         .json(&json!({ "wrong": "shape" }))
         .await

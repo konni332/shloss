@@ -22,7 +22,7 @@ pub struct RefreshRequest {
 pub enum RefreshResponse {
     #[serde(rename = "invalid")]
     Invalid,
-    #[serde(rename = "valid")]
+    #[serde(rename = "valid", rename_all = "camelCase")]
     Valid {
         new_refresh: String,
         new_token: String,
