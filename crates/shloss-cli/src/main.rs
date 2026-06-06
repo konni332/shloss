@@ -5,6 +5,7 @@ use clap::Parser;
 use dialoguer::Confirm;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use uuid::Uuid;
 
 use crate::cli::{Cli, Command};
 
@@ -16,20 +17,22 @@ fn main() -> anyhow::Result<()> {
         Command::GenerateConfig { name } => {
             let key = generate_service_key()?;
             let hash = hash_key(&key);
-            generate_config(&name, &hash)?;
+            let vault_id = Uuid::new_v4();
+            generate_config(&name, &hash, vault_id)?;
             print_raw_key(&name, &key);
         }
         Command::GenerateKey { name } => {
             let key = generate_service_key()?;
             let hash = hash_key(&key);
-            append_new_key(&name, &hash)?;
+            let vault_id = Uuid::new_v4();
+            append_new_key(&name, &hash, vault_id)?;
             print_raw_key(&name, &key);
         }
     };
     Ok(())
 }
 
-fn generate_config(name: &str, hash: &str) -> anyhow::Result<()> {
+fn generate_config(name: &str, hash: &str, vault_id: Uuid) -> anyhow::Result<()> {
     let path = Path::new("./client_credentials.toml");
     if path.exists() {
         let overwrite = Confirm::new()
@@ -44,6 +47,7 @@ fn generate_config(name: &str, hash: &str) -> anyhow::Result<()> {
         keys: vec![ServiceKey {
             name: name.to_string(),
             hash: hash.to_string(),
+            vault_id,
         }],
     };
     write_config(&config, path)
@@ -57,9 +61,10 @@ pub struct ClientConfig {
 pub struct ServiceKey {
     name: String,
     hash: String,
+    vault_id: Uuid,
 }
 
-fn append_new_key(name: &str, hash: &str) -> anyhow::Result<()> {
+fn append_new_key(name: &str, hash: &str, vault_id: Uuid) -> anyhow::Result<()> {
     let path = Path::new("./client_credentials.toml");
     if !path.exists() {
         bail!("no client_credentials.toml found, run generate-config first");
@@ -86,6 +91,7 @@ fn append_new_key(name: &str, hash: &str) -> anyhow::Result<()> {
     config.keys.push(ServiceKey {
         name: name.to_string(),
         hash: hash.to_string(),
+        vault_id,
     });
     write_config(&config, path)
 }

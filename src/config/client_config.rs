@@ -1,6 +1,7 @@
 use std::{collections::HashMap, path::Path};
 
 use serde::Deserialize;
+use uuid::Uuid;
 
 use crate::error::ClientConfigError;
 
@@ -12,6 +13,7 @@ pub struct ClientConfig {
 pub struct ServiceKey {
     pub name: String,
     pub hash: String,
+    pub vault_id: Uuid,
 }
 
 impl ClientConfig {
