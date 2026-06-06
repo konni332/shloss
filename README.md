@@ -22,48 +22,18 @@ Opaque tokens and refresh tokens are stateful and stored in the database. They c
 
 ## API
 
-All endpoints except `/.well-known/jwks.json` require a valid service token passed as a Bearer token in the `Authorization` header. Service tokens are obtained via `POST /v1/services/login`.
-
-```
-# public
-GET  /.well-known/jwks.json                      fetch the RSA public key set for JWT verification
-
-# service auth
-POST /v1/services/login                          authenticate as a service, get a service token
-
-# user auth
-POST /v1/users/register                          register a new user
-POST /v1/users/login                             log a user in, get a token back
-
-# tokens
-POST /v1/tokens/validate                         check whether an opaque token or JWT is valid
-POST /v1/tokens/refresh                          rotate a refresh token, get a new token
-POST /v1/tokens/revoke                           revoke a specific opaque token
-
-# sessions
-GET  /v1/users/{user_id}/sessions                list all sessions for a user
-POST /v1/users/{user_id}/sessions/revoke-all     revoke all sessions and tokens for a user
-POST /v1/sessions/{session_id}/revoke            revoke a specific session and its tokens
-
-# user management
-DELETE /v1/users/{user_id}                       delete a user and all associated data
-POST   /v1/users/{user_id}/password              change a user's password
-POST   /v1/users/{user_id}/username              change a user's username
-POST   /v1/users/{user_id}/api-keys              add an API key to an existing user
-POST   /v1/users/{user_id}/api-keys/revoke       revoke a specific API key
-POST   /v1/users/{user_id}/api-keys/revoke-all   revoke all API keys for a user
-```
+For information about the API endpoint have a look at the [API](docs/API.md) documentation.
 
 ## Typical flow
 
 1. A user tries to log in to your application.
-2. Your service sends their credentials to `POST /v1/users/login` along with the token type you want.
-3. Shloss verifies the credentials and returns a token, a `user_id`, and optionally a refresh token.
-4. Your service gives the token to the user and stores the `user_id` alongside your application data.
+2. Your service sends their credentials to `POST /v1/auth/login` along with the token type you want.
+3. Shloss verifies the credentials and returns a token, a `userId`, and optionally a refresh token.
+4. Your service gives the token to the user and stores the `userId` alongside your application data.
 5. On subsequent requests, your service validates the token with Shloss (opaque) or verifies it locally using the JWKS public key (JWT).
 6. When the token expires, your service uses the refresh token to get a new one without asking the user to log in again.
 
-The `user_id` is the stable identifier for a user across all operations. Your service receives it on registration and login, and uses it for all session, token, and user management calls.
+The `userId` is the stable identifier for a user across all operations. Your service receives it on registration and login, and uses it for all session, token, and user management calls.
 
 ## Configuration
 
@@ -143,6 +113,10 @@ AI was used for documentation. All application logic is handwritten.
 
 MIT
 
-## Roadmap
+## Roadmap to 1.0.0
 
-- Official client library to make integrating with Shloss from other Rust services straightforward
+- Official client library to make integrating with Shloss easy. A Rust version is planned, but perhaps libraries in other languages will be added.
+- Vaults: The vault feature would allow services, which do not trust each other to run on the same Shloss instance. This would mean, associating all data(users, sessions, credentials, etc.) to be associated to a specific service.
+  When requesting, the serviceId would be derived from the given API-key and used to filter all outputs.
+- Deployment setups/templates to securely deploy a Shloss instance.
+- Pentesting of both core application logic and the deployment setup.
