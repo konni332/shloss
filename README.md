@@ -73,6 +73,9 @@ shloss-cli generate-config -n myservice
 
 # add a key for an additional service
 shloss-cli generate-key -n anotherservice
+
+# rotate a serivce key without changing the vault_id or loosing any associated data
+shloss-cli rotate-key -n myservice
 ```
 
 The generated key is prefixed with `shloss_` and should be passed as a Bearer token when calling the API:
