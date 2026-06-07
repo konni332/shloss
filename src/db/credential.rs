@@ -125,16 +125,24 @@ impl ApiKey {
         key_prefix: &str,
         hash: &str,
         expires_at: Option<DateTime<Utc>>,
-    ) -> ShlossResult<Self> {
-        let id = generate_uuid();
-        let api_key = sqlx::query_as!(
+        vault_id: &Uuid,
+    ) -> ShlossResult<Option<Self>> {
+        let key = sqlx::query_as!(
             ApiKey,
-            r#"INSERT INTO api_keys (id, user_id, name, key_prefix, hash, expires_at) VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING *"#,
-            id, user_id, name, key_prefix, hash, expires_at
-        ).fetch_one(pool).await?;
-
-        Ok(api_key)
+            "INSERT INTO api_keys (id, user_id, name, key_prefix, hash, expires_at)
+            SELECT $1, $2, $3, $4, $5, $6
+            WHERE EXISTS (SELECT 1 FROM users WHERE id = $2 AND vault_id = $7) RETURNING *",
+            generate_uuid(),
+            user_id,
+            name,
+            key_prefix,
+            hash,
+            expires_at,
+            vault_id,
+        )
+        .fetch_optional(pool)
+        .await?;
+        Ok(key)
     }
     pub async fn revoke(
         pool: &PgPool,

@@ -353,7 +353,6 @@ async fn service_cannot_list_sessions_for_user_in_another_vault() {
 #[tokio::test]
 async fn service_cannot_revoke_session_for_user_in_another_vault() {
     let app = TestApp::new().await;
-    register_password_user(&app, "sessionrevokevault", "hunter2", 0).await;
     let (token, _) = app
         .register_and_login_opaque("sessionrevokevault", "hunter2", 0)
         .await;
@@ -394,9 +393,7 @@ async fn service_cannot_revoke_session_for_user_in_another_vault() {
 #[tokio::test]
 async fn service_cannot_revoke_all_sessions_for_user_in_another_vault() {
     let app = TestApp::new().await;
-    let reg: Value = register_password_user(&app, "revokeallsessionvault", "hunter2", 0).await;
-    let user_id = reg["userId"].as_str().unwrap();
-    let (token, _) = app
+    let (token, user_id) = app
         .register_and_login_opaque("revokeallsessionvault", "hunter2", 0)
         .await;
     // vault 1 tries to revoke all sessions

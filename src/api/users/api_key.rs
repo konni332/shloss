@@ -47,28 +47,33 @@ pub struct AddApiKeyResponse {
     key: String,
 }
 
-#[instrument(skip(state, _service, body), fields(key_prefix = %body.key_prefix))]
+#[instrument(skip(state, vault_id, body), fields(key_prefix = %body.key_prefix))]
 pub async fn api_add_api_key(
     State(state): State<AppState>,
-    _service: AuthService,
+    AuthService(vault_id): AuthService,
     Path(user_id): Path<Uuid>,
     Json(body): Json<AddApiKeyRequest>,
 ) -> Result<Json<AddApiKeyResponse>, StatusCode> {
     tracing::info!("adding api key");
     let generated_key = generate_api_key(body.key_prefix.clone());
-    db::ApiKey::create(
+    let inserted = db::ApiKey::create(
         &state.pool,
         &user_id,
         &body.name,
         &body.key_prefix,
         &generated_key.hash,
         body.expires_at,
+        &vault_id,
     )
     .await
     .map_err(|e| {
         tracing::error!(error = %e, "error adding api key");
         StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    })?
+    .is_some();
+    if !inserted {
+        return Err(StatusCode::NOT_FOUND);
+    }
     tracing::info!("api added successfully");
     Ok(Json(AddApiKeyResponse {
         key: generated_key.full_key,

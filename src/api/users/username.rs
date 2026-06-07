@@ -35,9 +35,13 @@ pub async fn api_change_username(
     )
     .await
     {
-        Ok(_) => {
+        Ok(true) => {
             tracing::info!("username updated successfully");
             StatusCode::OK
+        }
+        Ok(false) => {
+            tracing::info!("user not found");
+            StatusCode::NOT_FOUND
         }
         Err(ShlossError::Database(sqlx::Error::Database(db_e)))
             if db_e.code().map(|c| c.as_ref() == "23505").unwrap_or(false) =>

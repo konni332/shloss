@@ -33,6 +33,7 @@ pub async fn register(
                 &key_prefix,
                 &api_key.hash,
                 expires_at,
+                vault_id,
             )
             .await?;
             Ok(RegisterResponse::ApiKey {
