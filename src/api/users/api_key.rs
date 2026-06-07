@@ -14,13 +14,13 @@ use crate::{
     server::{AppState, AuthService},
 };
 
-#[instrument(skip(state, _service))]
+#[instrument(skip(state, vault_id))]
 pub async fn api_revoke_all_api_keys(
     State(state): State<AppState>,
-    _service: AuthService,
+    AuthService(vault_id): AuthService,
     Path(user_id): Path<Uuid>,
 ) -> StatusCode {
-    match db::ApiKey::revoke_for_user(&state.pool, &user_id).await {
+    match db::ApiKey::revoke_for_user(&state.pool, &user_id, &vault_id).await {
         Ok(_) => {
             tracing::info!("all api keys revoked successfully");
             StatusCode::OK
@@ -81,16 +81,16 @@ pub struct RevokeApiKeyRequest {
     key: String,
 }
 
-#[instrument(skip(state, _service, body))]
+#[instrument(skip(state, vault_id, body))]
 pub async fn api_revoke_api_key(
     State(state): State<AppState>,
-    _service: AuthService,
+    AuthService(vault_id): AuthService,
     Path(user_id): Path<Uuid>,
     Json(body): Json<RevokeApiKeyRequest>,
 ) -> StatusCode {
     tracing::info!("revoking api key");
     let hash = hash_secret(&body.key);
-    match db::ApiKey::revoke(&state.pool, &hash, &user_id).await {
+    match db::ApiKey::revoke(&state.pool, &hash, &user_id, &vault_id).await {
         Ok(_) => {
             tracing::info!("api key revoked successfully");
             StatusCode::OK

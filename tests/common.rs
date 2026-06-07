@@ -31,9 +31,13 @@ impl TestApp {
         let _ = jsonwebtoken::crypto::CryptoProvider::install_default(
             &jsonwebtoken::crypto::rust_crypto::DEFAULT_PROVIDER,
         );
-        let _ = tracing_subscriber::fmt()
-            .with_env_filter("shloss=debug")
-            .try_init();
+        #[cfg(debug_assertions)]
+        {
+            let _ = tracing_subscriber::fmt()
+                .with_env_filter("shloss=debug")
+                .try_init();
+        }
+
         let database_url = std::env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgresql:///shloss_test".to_string());
 

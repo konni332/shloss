@@ -49,22 +49,24 @@ impl Session {
 
         Ok(session)
     }
-    pub async fn delete(pool: &PgPool, id: &Uuid) -> ShlossResult<()> {
-        sqlx::query!("DELETE FROM sessions WHERE id = $1", id)
-            .execute(pool)
-            .await?;
-
-        Ok(())
-    }
-    pub async fn revoke(pool: &PgPool, id: &Uuid, user_id: &Uuid) -> ShlossResult<()> {
+    pub async fn revoke(
+        pool: &PgPool,
+        id: &Uuid,
+        user_id: &Uuid,
+        vault_id: &Uuid,
+    ) -> ShlossResult<()> {
         let id = sqlx::query_scalar!(
-            "UPDATE sessions SET revoked_at = NOW() WHERE id = $1 AND user_id = $2 RETURNING id",
+            "UPDATE sessions SET revoked_at = NOW()
+            WHERE id = $1 AND user_id = (SELECT id FROM users WHERE id = $2 AND vault_id = $3)
+            RETURNING id",
             id,
-            user_id
+            user_id,
+            vault_id,
         )
         .fetch_one(pool)
         .await?;
-
+        // there is no need to scope the tokens using vault_id because `fetch_one()` will fail if
+        // the session does not belong to the given vault!
         sqlx::query!(
             "UPDATE opaque_tokens SET revoked_at = NOW() WHERE session_id = $1",
             &id
@@ -80,30 +82,47 @@ impl Session {
 
         Ok(())
     }
-    pub async fn find_for_user(pool: &PgPool, user_id: &Uuid) -> ShlossResult<Vec<Session>> {
+    pub async fn find_for_user(
+        pool: &PgPool,
+        user_id: &Uuid,
+        vault_id: &Uuid,
+    ) -> ShlossResult<Vec<Session>> {
         let sessions = sqlx::query_as!(
             Session,
-            "SELECT * FROM sessions WHERE user_id = $1",
-            user_id
+            "SELECT * FROM sessions WHERE user_id = (SELECT id FROM users WHERE id = $1 AND vault_id = $2)",
+            user_id,
+            vault_id,
         )
         .fetch_all(pool)
         .await?;
         Ok(sessions)
     }
-    pub async fn active_user_sessions(pool: &PgPool, user_id: &Uuid) -> ShlossResult<usize> {
+    pub async fn active_user_sessions(
+        pool: &PgPool,
+        user_id: &Uuid,
+        vault_id: &Uuid,
+    ) -> ShlossResult<usize> {
         let count = sqlx::query_scalar!(
-            "SELECT COUNT(s.id) FROM sessions s WHERE s.user_id = $1",
-            user_id
+            "SELECT COUNT(s.id) FROM sessions s WHERE s.user_id = (SELECT id FROM users WHERE id = $1 AND vault_id = $2)",
+            user_id,
+            vault_id,
         )
         .fetch_one(pool)
         .await?;
 
         Ok(count.unwrap_or(0) as usize)
     }
-    pub async fn revoke_all_for_user(pool: &PgPool, user_id: &Uuid) -> ShlossResult<()> {
+    pub async fn revoke_all_for_user(
+        pool: &PgPool,
+        user_id: &Uuid,
+        vault_id: &Uuid,
+    ) -> ShlossResult<()> {
         let ids = sqlx::query_scalar!(
-            "UPDATE sessions SET revoked_at = NOW() WHERE user_id = $1 RETURNING id",
-            user_id
+            "UPDATE sessions SET revoked_at = NOW()
+            WHERE user_id = (SELECT id FROM users WHERE id = $1 AND vault_id = $2)
+            RETURNING id",
+            user_id,
+            vault_id,
         )
         .fetch_all(pool)
         .await?;

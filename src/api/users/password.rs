@@ -19,10 +19,10 @@ pub struct ChangePasswordRequest {
     new_password: String,
 }
 
-#[instrument(skip(state, _service, body))]
+#[instrument(skip(state, vault_id, body))]
 pub async fn api_change_password(
     State(state): State<AppState>,
-    _service: AuthService,
+    AuthService(vault_id): AuthService,
     Path(user_id): Path<Uuid>,
     Json(body): Json<ChangePasswordRequest>,
 ) -> StatusCode {
@@ -34,7 +34,8 @@ pub async fn api_change_password(
             return StatusCode::INTERNAL_SERVER_ERROR;
         }
     };
-    match db::PasswordCredential::update_password(&state.pool, &user_id, &new_hash).await {
+    match db::PasswordCredential::update_password(&state.pool, &user_id, &new_hash, &vault_id).await
+    {
         Ok(true) => {
             tracing::info!("password updated");
             StatusCode::OK

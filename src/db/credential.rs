@@ -11,6 +11,7 @@ use crate::{crypto::generate_uuid, error::ShlossResult};
 pub struct PasswordCredential {
     pub(crate) id: Uuid,
     pub(crate) user_id: Uuid,
+    pub(crate) vault_id: Uuid,
     pub(crate) username: String,
     pub(crate) hash: String,
     pub(crate) created_at: DateTime<Utc>,
@@ -37,33 +38,31 @@ impl PasswordCredential {
     pub async fn create(
         pool: &PgPool,
         user_id: &Uuid,
+        vault_id: &Uuid,
         username: &str,
         hash: &str,
     ) -> ShlossResult<Self> {
         let id = generate_uuid();
         let cred = sqlx::query_as!(
             PasswordCredential,
-            r#"INSERT INTO password_credentials (id, user_id, username, hash) VALUES ($1, $2, $3, $4)
-            RETURNING id, user_id, username, hash, created_at, updated_at"#,
-            id, user_id, username, hash,
+            r#"INSERT INTO password_credentials (id, user_id, vault_id, username, hash) VALUES ($1, $2, $3, $4, $5)
+            RETURNING *"#,
+            id, user_id, vault_id, username, hash,
             ).fetch_one(pool).await?;
         Ok(cred)
-    }
-    pub async fn delete(pool: &PgPool, id: &Uuid) -> ShlossResult<()> {
-        sqlx::query!("DELETE FROM password_credentials WHERE id = $1", id)
-            .execute(pool)
-            .await?;
-        Ok(())
     }
     pub async fn update_password(
         pool: &PgPool,
         user_id: &Uuid,
         new_hash: &str,
+        vault_id: &Uuid,
     ) -> ShlossResult<bool> {
         let result = sqlx::query!(
-            "UPDATE password_credentials SET hash = $2, updated_at = NOW() WHERE user_id = $1",
+            "UPDATE password_credentials SET hash = $2, updated_at = NOW()
+            WHERE user_id = (SELECT id FROM users WHERE id = $1 AND vault_id = $3)",
             user_id,
             new_hash,
+            vault_id,
         )
         .execute(pool)
         .await?;
@@ -74,31 +73,43 @@ impl PasswordCredential {
         pool: &PgPool,
         user_id: &Uuid,
         new_username: &str,
-    ) -> ShlossResult<()> {
-        sqlx::query!(
-            "UPDATE password_credentials SET username = $2, updated_at = NOW() WHERE user_id = $1",
+        vault_id: &Uuid,
+    ) -> ShlossResult<bool> {
+        let rows = sqlx::query!(
+            "UPDATE password_credentials SET username = $2, updated_at = NOW() WHERE user_id = (SELECT id FROM users WHERE id = $1 AND vault_id = $3)",
             user_id,
             new_username,
+            vault_id,
         )
         .execute(pool)
-        .await?;
+        .await?.rows_affected();
 
-        Ok(())
+        Ok(rows > 0)
     }
-    pub async fn fetch_for_user(pool: &PgPool, user_id: &Uuid) -> ShlossResult<Option<Self>> {
+    pub async fn fetch_for_user(
+        pool: &PgPool,
+        user_id: &Uuid,
+        vault_id: &Uuid,
+    ) -> ShlossResult<Option<Self>> {
         let cred = sqlx::query_as!(
             PasswordCredential,
-            "SELECT * FROM password_credentials WHERE user_id = $1",
-            user_id
+            "SELECT * FROM password_credentials WHERE user_id = (SELECT id FROM users WHERE id = $1 AND vault_id = $2)",
+            user_id,
+            vault_id,
         )
         .fetch_optional(pool)
         .await?;
         Ok(cred)
     }
-    pub async fn get_hash_for_user(pool: &PgPool, user_id: &Uuid) -> ShlossResult<Option<String>> {
+    pub async fn get_hash_for_user(
+        pool: &PgPool,
+        user_id: &Uuid,
+        vault_id: &Uuid,
+    ) -> ShlossResult<Option<String>> {
         let hash = sqlx::query_scalar!(
-            "SELECT hash FROM password_credentials WHERE user_id = $1",
-            user_id
+            "SELECT hash FROM password_credentials WHERE user_id = (SELECT id FROM users WHERE id = $1 AND vault_id = $2)",
+            user_id,
+            vault_id,
         )
         .fetch_optional(pool)
         .await?;
@@ -125,27 +136,48 @@ impl ApiKey {
 
         Ok(api_key)
     }
-    pub async fn revoke(pool: &PgPool, hash: &str, user_id: &Uuid) -> ShlossResult<()> {
+    pub async fn revoke(
+        pool: &PgPool,
+        hash: &str,
+        user_id: &Uuid,
+        vault_id: &Uuid,
+    ) -> ShlossResult<()> {
         sqlx::query!(
-            "UPDATE api_keys SET revoked_at = NOW() WHERE hash = $1 AND user_id = $2",
+            "UPDATE api_keys SET revoked_at = NOW() 
+            WHERE hash = $1 AND user_id = (SELECT id FROM users WHERE id = $2 AND vault_id = $3)",
             hash,
-            user_id
+            user_id,
+            vault_id,
         )
         .execute(pool)
         .await?;
         Ok(())
     }
-    pub async fn fetch_for_user(pool: &PgPool, user_id: &Uuid) -> ShlossResult<Vec<ApiKey>> {
-        let api_keys =
-            sqlx::query_as!(ApiKey, "SELECT * FROM api_keys WHERE user_id = $1", user_id)
-                .fetch_all(pool)
-                .await?;
+    pub async fn fetch_for_user(
+        pool: &PgPool,
+        user_id: &Uuid,
+        vault_id: &Uuid,
+    ) -> ShlossResult<Vec<ApiKey>> {
+        let api_keys = sqlx::query_as!(
+            ApiKey,
+            "SELECT * FROM api_keys 
+                WHERE user_id = (SELECT id FROM users WHERE id = $1 AND vault_id = $2)",
+            user_id,
+            vault_id
+        )
+        .fetch_all(pool)
+        .await?;
         Ok(api_keys)
     }
-    pub async fn revoke_for_user(pool: &PgPool, user_id: &Uuid) -> ShlossResult<()> {
+    pub async fn revoke_for_user(
+        pool: &PgPool,
+        user_id: &Uuid,
+        vault_id: &Uuid,
+    ) -> ShlossResult<()> {
         sqlx::query!(
-            "UPDATE api_keys SET revoked_at = NOW() WHERE user_id = $1",
-            user_id
+            "UPDATE api_keys SET revoked_at = NOW() WHERE user_id = (SELECT id FROM users WHERE id = $1 AND vault_id = $2)",
+            user_id,
+            vault_id,
         )
         .execute(pool)
         .await?;

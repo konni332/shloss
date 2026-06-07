@@ -51,14 +51,14 @@ impl std::fmt::Display for RegisterResponse {
     }
 }
 
-#[instrument(skip(state, _service, body))]
+#[instrument(skip(state, vault_id, body))]
 pub async fn api_register(
     State(state): State<AppState>,
-    _service: AuthService,
+    AuthService(vault_id): AuthService,
     Json(body): Json<RegisterRequest>,
 ) -> Result<Json<RegisterResponse>, StatusCode> {
     tracing::info!(credential_kind = %body, "user registration attempt");
-    match auth::register(&state.pool, body).await {
+    match auth::register(&state.pool, body, &vault_id).await {
         Ok(resp) => {
             tracing::info!(user_id = %resp, "user registered successfully");
             Ok(Json(resp))

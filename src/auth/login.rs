@@ -78,13 +78,14 @@ pub async fn login(
     pool: &PgPool,
     encoding_key: &EncodingKey,
     context: LoginContext,
+    vault_id: &Uuid,
 ) -> ShlossResult<Option<LoginResult>> {
     let user = match context.credentials {
         Credentials::Password { username, password } => {
-            verify_password_credentials(pool, &username, &password).await?
+            verify_password_credentials(pool, &username, &password, vault_id).await?
         }
         Credentials::ApiKey { full_key } => {
-            let user = verify_api_key_credentials(pool, &full_key).await?;
+            let user = verify_api_key_credentials(pool, &full_key, vault_id).await?;
             if user.is_some() {
                 let hash = hash_secret(&full_key);
                 db::ApiKey::update_used(pool, &hash).await?;
@@ -132,11 +133,12 @@ async fn verify_password_credentials(
     pool: &PgPool,
     username: &str,
     password: &str,
+    vault_id: &Uuid,
 ) -> ShlossResult<Option<User>> {
-    let Some(user) = User::get_from_username(pool, username).await? else {
+    let Some(user) = User::get_from_username(pool, username, vault_id).await? else {
         return Ok(None);
     };
-    let Some(hash) = PasswordCredential::get_hash_for_user(pool, &user.id).await? else {
+    let Some(hash) = PasswordCredential::get_hash_for_user(pool, &user.id, vault_id).await? else {
         return Ok(None);
     };
     if verify_password(password, &hash)? {
@@ -145,7 +147,11 @@ async fn verify_password_credentials(
         Ok(None)
     }
 }
-async fn verify_api_key_credentials(pool: &PgPool, key: &str) -> ShlossResult<Option<User>> {
+async fn verify_api_key_credentials(
+    pool: &PgPool,
+    key: &str,
+    vault_id: &Uuid,
+) -> ShlossResult<Option<User>> {
     let hash = hash_secret(key);
-    User::get_from_api_key(pool, &hash).await
+    User::get_from_api_key(pool, &hash, vault_id).await
 }

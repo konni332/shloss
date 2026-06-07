@@ -1,4 +1,5 @@
 use sqlx::PgPool;
+use uuid::Uuid;
 
 use crate::{
     api::auth::register::{RegisterRequest, RegisterResponse},
@@ -10,12 +11,13 @@ use crate::{
 pub async fn register(
     pool: &PgPool,
     credential: RegisterRequest,
+    vault_id: &Uuid,
 ) -> ShlossResult<RegisterResponse> {
-    let user = User::create(pool).await?;
+    let user = User::create(pool, vault_id).await?;
     match credential {
         RegisterRequest::Password { username, password } => {
             let hash = hash_password(&password)?;
-            PasswordCredential::create(pool, &user.id, &username, &hash).await?;
+            PasswordCredential::create(pool, &user.id, vault_id, &username, &hash).await?;
             Ok(RegisterResponse::Password { user_id: user.id })
         }
         RegisterRequest::ApiKey {

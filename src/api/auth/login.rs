@@ -32,7 +32,7 @@ pub struct LoginResponse {
 }
 
 #[instrument(
-    skip(state, _service, body),
+    skip(state, vault_id, body),
     fields(
         credential_kind = %body.credentials,
         token_kind = %body.token_kind,
@@ -41,7 +41,7 @@ pub struct LoginResponse {
     )]
 pub async fn api_login(
     State(state): State<AppState>,
-    _service: AuthService,
+    AuthService(vault_id): AuthService,
     Json(body): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, StatusCode> {
     tracing::info!("user login");
@@ -59,10 +59,12 @@ pub async fn api_login(
             .map(|expires_at| RefreshTokenRequest { expires_at }),
     };
 
-    let result = auth::login(pool, encoding_key, ctx).await.map_err(|e| {
-        tracing::error!(error = %e, "error trying to login user");
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    let result = auth::login(pool, encoding_key, ctx, &vault_id)
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, "error trying to login user");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     let Some(result) = result else {
         tracing::warn!(ip_address = ?body.ip_address, "user login unauthorized");

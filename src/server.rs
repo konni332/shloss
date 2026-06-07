@@ -4,6 +4,7 @@ use axum::{extract::FromRequestParts, http::StatusCode};
 use sqlx::PgPool;
 use tokio::sync::RwLock;
 use tracing::debug;
+use uuid::Uuid;
 
 use crate::{
     auth::{ServiceKeyStore, validate_service_token},
@@ -19,7 +20,7 @@ pub struct AppState {
     pub jwks: Arc<Jwks>,
 }
 
-pub struct AuthService;
+pub struct AuthService(pub Uuid);
 
 impl FromRequestParts<AppState> for AuthService {
     type Rejection = StatusCode;
@@ -36,9 +37,9 @@ impl FromRequestParts<AppState> for AuthService {
             .ok_or(StatusCode::UNAUTHORIZED)?;
 
         let store = state.store.read().await;
-        if validate_service_token(&store, token) {
+        if let Some(vault_id) = validate_service_token(&store, token) {
             debug!("service token validated");
-            Ok(AuthService)
+            Ok(AuthService(vault_id))
         } else {
             tracing::warn!("service token invalid");
             Err(StatusCode::UNAUTHORIZED)

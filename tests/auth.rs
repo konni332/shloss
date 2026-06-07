@@ -5,6 +5,7 @@ use chrono::{Duration, Utc};
 use common::TestApp;
 use serde_json::{Value, json};
 use shloss::hash_secret;
+use uuid::Uuid;
 
 use crate::common::register_password_user;
 
@@ -87,6 +88,7 @@ async fn expired_service_token_returns_401() {
         };
         store.service_tokens.push(shloss::auth::ServiceToken {
             hash: expired_token.hash,
+            vault_id: Uuid::nil(),
             created_at: Utc::now() - Duration::days(2),
             expires_at: Utc::now() - Duration::days(1),
         });

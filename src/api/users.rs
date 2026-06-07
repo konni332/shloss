@@ -15,13 +15,13 @@ use crate::{
     server::{AppState, AuthService},
 };
 
-#[instrument(skip(state, _service))]
+#[instrument(skip(state, vault_id))]
 pub async fn api_delete_user(
     State(state): State<AppState>,
-    _service: AuthService,
+    AuthService(vault_id): AuthService,
     Path(user_id): Path<Uuid>,
 ) -> StatusCode {
-    match db::User::delete(&state.pool, &user_id).await {
+    match db::User::delete(&state.pool, &user_id, &vault_id).await {
         Ok(succ) if succ => {
             tracing::info!("user deleted");
             StatusCode::OK

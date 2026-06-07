@@ -12,14 +12,14 @@ use crate::{
     server::{AppState, AuthService},
 };
 
-#[instrument(skip(state, _service))]
+#[instrument(skip(state, vault_id))]
 pub async fn api_revoke_session_for_user(
     State(state): State<AppState>,
-    _service: AuthService,
+    AuthService(vault_id): AuthService,
     Path((user_id, session_id)): Path<(Uuid, Uuid)>,
 ) -> StatusCode {
     tracing::info!("revoking sessions");
-    match Session::revoke(&state.pool, &session_id, &user_id).await {
+    match Session::revoke(&state.pool, &session_id, &user_id, &vault_id).await {
         Ok(_) => {
             tracing::info!("sessions revoked successfully");
             StatusCode::OK
@@ -35,15 +35,15 @@ pub async fn api_revoke_session_for_user(
     }
 }
 
-#[instrument(skip(state, _service))]
+#[instrument(skip(state, vault_id))]
 pub async fn api_revoke_tokens_and_sessions_for_user(
     State(state): State<AppState>,
-    _service: AuthService,
+    AuthService(vault_id): AuthService,
     Path(user_id): Path<Uuid>,
 ) -> StatusCode {
     tracing::info!("attempting to revoke all sessions and tokens for user");
     let pool = &state.pool;
-    match db::OpaqueToken::revoke_for_user(pool, &user_id).await {
+    match db::OpaqueToken::revoke_for_user(pool, &user_id, &vault_id).await {
         Ok(_) => {
             tracing::info!("all opaque tokens revoked");
         }
@@ -52,7 +52,7 @@ pub async fn api_revoke_tokens_and_sessions_for_user(
             return StatusCode::INTERNAL_SERVER_ERROR;
         }
     }
-    match db::RefreshToken::revoke_for_user(pool, &user_id).await {
+    match db::RefreshToken::revoke_for_user(pool, &user_id, &vault_id).await {
         Ok(_) => {
             tracing::info!("all refresh tokens revoked");
         }
@@ -61,7 +61,7 @@ pub async fn api_revoke_tokens_and_sessions_for_user(
             return StatusCode::INTERNAL_SERVER_ERROR;
         }
     }
-    match db::Session::revoke_all_for_user(pool, &user_id).await {
+    match db::Session::revoke_all_for_user(pool, &user_id, &vault_id).await {
         Ok(_) => {
             tracing::info!("all sessions tokens revoked");
         }
@@ -74,14 +74,14 @@ pub async fn api_revoke_tokens_and_sessions_for_user(
     StatusCode::OK
 }
 
-#[instrument(skip(state, _service))]
+#[instrument(skip(state, vault_id))]
 pub async fn api_list_sessions(
     State(state): State<AppState>,
-    _service: AuthService,
+    AuthService(vault_id): AuthService,
     Path(user_id): Path<Uuid>,
 ) -> Result<Json<Vec<Session>>, StatusCode> {
     tracing::info!("listing sessions");
-    let sessions = Session::find_for_user(&state.pool, &user_id)
+    let sessions = Session::find_for_user(&state.pool, &user_id, &vault_id)
         .await
         .map_err(|e| {
             tracing::error!(error = %e, "error finding sessions for user");

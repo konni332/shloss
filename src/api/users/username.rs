@@ -19,15 +19,22 @@ pub struct ChangeUsernameRequest {
     new_username: String,
 }
 
-#[instrument(skip(state, _service, body))]
+#[instrument(skip(state, vault_id, body))]
 pub async fn api_change_username(
     State(state): State<AppState>,
-    _service: AuthService,
+    AuthService(vault_id): AuthService,
     Path(user_id): Path<Uuid>,
     Json(body): Json<ChangeUsernameRequest>,
 ) -> StatusCode {
     tracing::info!("changing username");
-    match db::PasswordCredential::update_username(&state.pool, &user_id, &body.new_username).await {
+    match db::PasswordCredential::update_username(
+        &state.pool,
+        &user_id,
+        &body.new_username,
+        &vault_id,
+    )
+    .await
+    {
         Ok(_) => {
             tracing::info!("username updated successfully");
             StatusCode::OK

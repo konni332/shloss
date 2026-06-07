@@ -56,34 +56,15 @@ impl OpaqueToken {
 
         Ok(token)
     }
-    pub async fn delete(pool: &PgPool, id: &Uuid) -> ShlossResult<()> {
-        sqlx::query!("DELETE FROM opaque_tokens WHERE id = $1", id)
-            .execute(pool)
-            .await?;
-        Ok(())
-    }
-    pub async fn revoke(pool: &PgPool, id: &Uuid) -> ShlossResult<()> {
+    pub async fn revoke_for_user(
+        pool: &PgPool,
+        user_id: &Uuid,
+        vault_id: &Uuid,
+    ) -> ShlossResult<()> {
         sqlx::query!(
-            "UPDATE opaque_tokens SET revoked_at = NOW() WHERE id = $1",
-            id,
-        )
-        .execute(pool)
-        .await?;
-        Ok(())
-    }
-    pub async fn revoke_for_session(pool: &PgPool, session_id: &Uuid) -> ShlossResult<()> {
-        sqlx::query!(
-            "UPDATE opaque_tokens SET revoked_at = NOW() WHERE session_id = $1",
-            session_id,
-        )
-        .execute(pool)
-        .await?;
-        Ok(())
-    }
-    pub async fn revoke_for_user(pool: &PgPool, user_id: &Uuid) -> ShlossResult<()> {
-        sqlx::query!(
-            "UPDATE opaque_tokens SET revoked_at = NOW() WHERE user_id = $1",
+            "UPDATE opaque_tokens SET revoked_at = NOW() WHERE user_id = (SELECT id FROM users WHERE id = $1 AND vault_id = $2)",
             user_id,
+            vault_id,
         )
         .execute(pool)
         .await?;
@@ -153,34 +134,15 @@ impl RefreshToken {
 
         Ok(new_refresh)
     }
-    pub async fn delete(pool: &PgPool, id: &Uuid) -> ShlossResult<()> {
-        sqlx::query!("DELETE FROM refresh_tokens WHERE id = $1", id)
-            .execute(pool)
-            .await?;
-        Ok(())
-    }
-    pub async fn revoke(pool: &PgPool, id: &Uuid) -> ShlossResult<()> {
+    pub async fn revoke_for_user(
+        pool: &PgPool,
+        user_id: &Uuid,
+        vault_id: &Uuid,
+    ) -> ShlossResult<()> {
         sqlx::query!(
-            "UPDATE refresh_tokens SET revoked_at = NOW() WHERE id = $1",
-            id,
-        )
-        .execute(pool)
-        .await?;
-        Ok(())
-    }
-    pub async fn revoke_for_session(pool: &PgPool, session_id: &Uuid) -> ShlossResult<()> {
-        sqlx::query!(
-            "UPDATE refresh_tokens SET revoked_at = NOW() WHERE session_id = $1",
-            session_id,
-        )
-        .execute(pool)
-        .await?;
-        Ok(())
-    }
-    pub async fn revoke_for_user(pool: &PgPool, user_id: &Uuid) -> ShlossResult<()> {
-        sqlx::query!(
-            "UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = $1",
+            "UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = (SELECT id FROM users WHERE id = $1 AND vault_id = $2)",
             user_id,
+            vault_id,
         )
         .execute(pool)
         .await?;
