@@ -70,12 +70,24 @@ impl OpaqueToken {
         .await?;
         Ok(())
     }
-    pub async fn find_valid_by_hash(pool: &PgPool, hash: &str) -> ShlossResult<Option<Self>> {
+    pub async fn find_valid_by_hash(
+        pool: &PgPool,
+        hash: &str,
+        vault_id: &Uuid,
+    ) -> ShlossResult<Option<Self>> {
         let token = sqlx::query_as!(
             OpaqueToken,
-            "SELECT * FROM opaque_tokens WHERE hash = $1 AND revoked_at IS NULL AND expires_at > NOW()",
-            hash
-        ).fetch_optional(pool).await?;
+            "SELECT o.* FROM opaque_tokens o
+            JOIN users u ON o.user_id = u.id
+            WHERE o.hash = $1
+            AND o.revoked_at IS NULL
+            AND o.expires_at > NOW()
+            AND u.vault_id = $2",
+            hash,
+            vault_id,
+        )
+        .fetch_optional(pool)
+        .await?;
         Ok(token)
     }
 }
@@ -148,12 +160,24 @@ impl RefreshToken {
         .await?;
         Ok(())
     }
-    pub async fn find_valid_by_hash(pool: &PgPool, hash: &str) -> ShlossResult<Option<Self>> {
+    pub async fn find_valid_by_hash(
+        pool: &PgPool,
+        hash: &str,
+        vault_id: &Uuid,
+    ) -> ShlossResult<Option<Self>> {
         let token = sqlx::query_as!(
             RefreshToken,
-            "SELECT * FROM refresh_tokens WHERE hash = $1 AND revoked_at IS NULL AND expires_at > NOW()",
-            hash
-        ).fetch_optional(pool).await?;
+            "SELECT rt.* FROM refresh_tokens rt
+            JOIN users u ON rt.user_id = u.id
+            WHERE rt.hash = $1
+            AND rt.revoked_at IS NULL
+            AND rt.expires_at > NOW()
+            AND u.vault_id = $2",
+            hash,
+            vault_id,
+        )
+        .fetch_optional(pool)
+        .await?;
         Ok(token)
     }
 }

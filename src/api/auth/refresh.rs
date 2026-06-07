@@ -29,15 +29,15 @@ pub enum RefreshResponse {
     },
 }
 
-#[instrument(skip(state, _service, body))]
+#[instrument(skip(state, vault_id, body))]
 pub async fn api_refresh_token(
     State(state): State<AppState>,
-    _service: AuthService,
+    AuthService(vault_id): AuthService,
     Json(body): Json<RefreshRequest>,
 ) -> Result<Json<RefreshResponse>, StatusCode> {
     let pool = &state.pool;
 
-    let result = validate_refresh_token(pool, &body.refresh_token)
+    let result = validate_refresh_token(pool, &body.refresh_token, &vault_id)
         .await
         .map_err(|e| {
             tracing::error!(error = %e, "error validating refresh token");

@@ -41,10 +41,10 @@ pub enum TokenValidateResponse {
     Valid { user_id: Uuid },
 }
 
-#[instrument(skip(state, _service, body), fields(token_kind = %body.kind))]
+#[instrument(skip(state, vault_id, body), fields(token_kind = %body.kind))]
 pub async fn api_validate_token(
     State(state): State<AppState>,
-    _service: AuthService,
+    AuthService(vault_id): AuthService,
     Json(body): Json<TokenValidateRequest>,
 ) -> Result<Json<TokenValidateResponse>, StatusCode> {
     tracing::debug!("validating token");
@@ -54,7 +54,7 @@ pub async fn api_validate_token(
     let token = &body.token;
 
     let result = match match body.kind {
-        TokenKind::Opaque => validate_opaque_token(pool, token).await,
+        TokenKind::Opaque => validate_opaque_token(pool, token, &vault_id).await,
         TokenKind::Jwt => validate_jwt(decoding_key, token).await,
     } {
         Ok(res) => res,

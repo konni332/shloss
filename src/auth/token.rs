@@ -26,15 +26,23 @@ pub async fn validate_jwt(decoding_key: &DecodingKey, token: &str) -> ShlossResu
 }
 
 /// Validates a given refresh token against the DB and returns the tokens internal id.
-pub async fn validate_refresh_token(pool: &PgPool, raw: &str) -> ShlossResult<Option<Uuid>> {
+pub async fn validate_refresh_token(
+    pool: &PgPool,
+    raw: &str,
+    vault_id: &Uuid,
+) -> ShlossResult<Option<Uuid>> {
     let hash = hash_secret(raw);
-    let token = RefreshToken::find_valid_by_hash(pool, &hash).await?;
+    let token = RefreshToken::find_valid_by_hash(pool, &hash, vault_id).await?;
     Ok(token.map(|t| t.id))
 }
 
 /// Validates a given refresh token against the DB and returns the tokens user_id.
-pub async fn validate_opaque_token(pool: &PgPool, raw: &str) -> ShlossResult<Option<Uuid>> {
+pub async fn validate_opaque_token(
+    pool: &PgPool,
+    raw: &str,
+    vault_id: &Uuid,
+) -> ShlossResult<Option<Uuid>> {
     let hash = hash_secret(raw);
-    let token = OpaqueToken::find_valid_by_hash(pool, &hash).await?;
+    let token = OpaqueToken::find_valid_by_hash(pool, &hash, vault_id).await?;
     Ok(token.map(|t| t.user_id))
 }
