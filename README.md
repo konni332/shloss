@@ -93,6 +93,30 @@ Three token types are supported:
 - **JWTs** are stateless and signed with RS256. Claims are defined by the requesting service. Shloss sets the `sub` field to the authenticated `user_id` and signs everything else as given. Expiry is the service's responsibility.
 - **Refresh tokens** are long-lived, stored in the database, and used to rotate to a new token without re-authenticating. Each rotation invalidates the old refresh token and issues a new one preserving the original lifetime.
 
+## Vaults
+
+Vaults provide tenant isolation for multi-service deployments. Each service operates within its own vault, and all data (users, sessions, credentials, and tokens) is scoped to that vault. Services cannot read or modify data belonging to another vault.
+
+The vault is derived implicitly from the service's API key. When a service authenticates, Shloss resolves the vault associated with that key and applies it to every subsequent operation. No vault identifier is ever passed explicitly in requests.
+
+This means the same username can exist in multiple vaults without conflict, a user_id from one vault is meaningless to another, and tokens issued in one vault cannot be validated or rotated by another.
+
+Vaults are configured by an admin in `client_credentials.toml`. Each service key has a `vault_id` field which is generated once by `shloss-cli` and never changes. One key maps to one vault.
+
+```toml
+[[keys]]
+name = "foomail"
+hash = "a3f2c1..."
+vault_id = "123e4567-e89b-12d3-a456-426614174000"
+
+[[keys]]
+name = "barservice"
+hash = "9d4e2b..."
+vault_id = "987fbc97-4bed-5078-af07-9141ba07c9f3"
+```
+
+If a `vault_id` is changed after users have been registered, all data associated with the old vault becomes inaccessible. Treat vault IDs as permanent.
+
 ## Running
 
 ```bash
@@ -116,7 +140,5 @@ MIT
 ## Roadmap to 1.0.0
 
 - Official client library to make integrating with Shloss easy. A Rust version is planned, but perhaps libraries in other languages will be added.
-- Vaults: The vault feature would allow services, which do not trust each other to run on the same Shloss instance. This would mean, associating all data(users, sessions, credentials, etc.) to be associated to a specific service.
-  When requesting, the serviceId would be derived from the given API-key and used to filter all outputs.
 - Deployment setups/templates to securely deploy a Shloss instance.
 - Pentesting of both core application logic and the deployment setup.
