@@ -17,11 +17,23 @@ pub use crypto::{GeneratedToken, hash_secret};
 
 /// Initialize logging. This should only ever be called once, on program start
 pub fn init_logging() {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
-        )
-        .init();
+    #[cfg(debug_assertions)]
+    {
+        tracing_subscriber::fmt()
+            .with_env_filter(
+                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+            )
+            .init();
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        tracing_subscriber::fmt()
+            .json()
+            .with_env_filter(
+                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+            )
+            .init();
+    }
 }
 
 pub fn load_config() -> anyhow::Result<ShlossConfig> {
