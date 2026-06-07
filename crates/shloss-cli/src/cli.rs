@@ -21,4 +21,10 @@ pub enum Command {
         #[arg(short, long)]
         name: String,
     },
+    /// Rotate an existing service key
+    RotateKey {
+        /// Name of the service
+        #[arg(short, long)]
+        name: String,
+    },
 }

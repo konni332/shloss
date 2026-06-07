@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::bail;
+use anyhow::{Context, bail};
 use clap::Parser;
 use dialoguer::Confirm;
 use serde::{Deserialize, Serialize};
@@ -27,6 +27,19 @@ fn main() -> anyhow::Result<()> {
             let vault_id = Uuid::new_v4();
             append_new_key(&name, &hash, vault_id)?;
             print_raw_key(&name, &key);
+        }
+        Command::RotateKey { name } => {
+            let new_key = generate_service_key()?;
+            let hash = hash_key(&new_key);
+            let mut config = ClientConfig::load()?;
+            let key = config
+                .keys
+                .iter_mut()
+                .find(|k| k.name == name)
+                .context(format!("No service by the name '{name}' found. Try `shloss-cli generate_key to add a new service key`"))?;
+            key.hash = hash;
+            write_config(&config, Path::new("./client_credentials.toml"))?;
+            print_raw_key(&name, &new_key);
         }
     };
     Ok(())
@@ -62,6 +75,15 @@ pub struct ServiceKey {
     name: String,
     hash: String,
     vault_id: Uuid,
+}
+
+impl ClientConfig {
+    fn load() -> anyhow::Result<Self> {
+        let path = Path::new("./client_credentials.toml");
+        let toml_str = std::fs::read_to_string(path)?;
+        let toml: Self = toml::from_str(&toml_str)?;
+        Ok(toml)
+    }
 }
 
 fn append_new_key(name: &str, hash: &str, vault_id: Uuid) -> anyhow::Result<()> {
