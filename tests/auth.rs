@@ -10,7 +10,7 @@ use uuid::Uuid;
 use crate::common::register_password_user;
 
 async fn login_opaque(app: &TestApp, username: &str, password: &str, expires_at: &str) -> Value {
-    let token = app.service_token().await;
+    let token = app.service_token(0).await;
     app.server
         .post("/v1/auth/login")
         .add_header("Authorization", &token)
@@ -67,7 +67,7 @@ async fn service_login_malformed_body_returns_422() {
 #[tokio::test]
 async fn service_token_is_usable_for_protected_routes() {
     let app = TestApp::new().await;
-    let token = app.service_token().await;
+    let token = app.service_token(0).await;
     app.server
         .post("/v1/auth/register")
         .add_header("Authorization", &token)
@@ -106,14 +106,14 @@ async fn expired_service_token_returns_401() {
 #[tokio::test]
 async fn register_password_user_returns_user_id() {
     let app = TestApp::new().await;
-    let body = register_password_user(&app, "newuser", "hunter2").await;
+    let body = register_password_user(&app, "newuser", "hunter2", 0).await;
     assert!(body["userId"].as_str().is_some());
 }
 
 #[tokio::test]
 async fn register_api_key_user_returns_user_id_and_key() {
     let app = TestApp::new().await;
-    let token = app.service_token().await;
+    let token = app.service_token(0).await;
     let res = app
         .server
         .post("/v1/auth/register")
@@ -136,8 +136,8 @@ async fn register_api_key_user_returns_user_id_and_key() {
 #[tokio::test]
 async fn register_duplicate_username_returns_conflict() {
     let app = TestApp::new().await;
-    register_password_user(&app, "dupeuser", "hunter2").await;
-    let token = app.service_token().await;
+    register_password_user(&app, "dupeuser", "hunter2", 0).await;
+    let token = app.service_token(0).await;
     app.server
         .post("/v1/auth/register")
         .add_header("Authorization", &token)
@@ -170,7 +170,7 @@ async fn register_with_invalid_service_token_returns_401() {
 #[tokio::test]
 async fn register_malformed_body_returns_422() {
     let app = TestApp::new().await;
-    let token = app.service_token().await;
+    let token = app.service_token(0).await;
     app.server
         .post("/v1/auth/register")
         .add_header("Authorization", &token)
@@ -184,7 +184,7 @@ async fn register_malformed_body_returns_422() {
 #[tokio::test]
 async fn login_valid_password_returns_opaque_token_and_user_id() {
     let app = TestApp::new().await;
-    let reg: Value = register_password_user(&app, "loginuser", "hunter2").await;
+    let reg: Value = register_password_user(&app, "loginuser", "hunter2", 0).await;
     let expected_user_id = reg["userId"].as_str().unwrap();
     let body = login_opaque(&app, "loginuser", "hunter2", "2099-01-01T00:00:00Z").await;
     assert!(body["token"].as_str().is_some());
@@ -194,9 +194,9 @@ async fn login_valid_password_returns_opaque_token_and_user_id() {
 #[tokio::test]
 async fn login_valid_password_returns_jwt_and_user_id() {
     let app = TestApp::new().await;
-    let reg: Value = register_password_user(&app, "jwtuser", "hunter2").await;
+    let reg: Value = register_password_user(&app, "jwtuser", "hunter2", 0).await;
     let expected_user_id = reg["userId"].as_str().unwrap();
-    let token = app.service_token().await;
+    let token = app.service_token(0).await;
     let res = app
         .server
         .post("/v1/auth/login")
@@ -221,8 +221,8 @@ async fn login_valid_password_returns_jwt_and_user_id() {
 #[tokio::test]
 async fn login_with_refresh_token_requested() {
     let app = TestApp::new().await;
-    register_password_user(&app, "refreshuser", "hunter2").await;
-    let token = app.service_token().await;
+    register_password_user(&app, "refreshuser", "hunter2", 0).await;
+    let token = app.service_token(0).await;
     let res = app
         .server
         .post("/v1/auth/login")
@@ -244,8 +244,8 @@ async fn login_with_refresh_token_requested() {
 #[tokio::test]
 async fn login_wrong_password_returns_401() {
     let app = TestApp::new().await;
-    register_password_user(&app, "wrongpassuser", "correct").await;
-    let token = app.service_token().await;
+    register_password_user(&app, "wrongpassuser", "correct", 0).await;
+    let token = app.service_token(0).await;
     app.server
         .post("/v1/auth/login")
         .add_header("Authorization", &token)
@@ -263,7 +263,7 @@ async fn login_wrong_password_returns_401() {
 #[tokio::test]
 async fn login_nonexistent_user_returns_401() {
     let app = TestApp::new().await;
-    let token = app.service_token().await;
+    let token = app.service_token(0).await;
     app.server
         .post("/v1/auth/login")
         .add_header("Authorization", &token)
@@ -282,8 +282,8 @@ async fn login_nonexistent_user_returns_401() {
 async fn login_nonexistent_and_wrong_password_return_same_status() {
     // ensure we dont leak whether a username exists
     let app = TestApp::new().await;
-    register_password_user(&app, "existinguser", "correct").await;
-    let token = app.service_token().await;
+    register_password_user(&app, "existinguser", "correct", 0).await;
+    let token = app.service_token(0).await;
     let wrong_pass = app
         .server
         .post("/v1/auth/login")
@@ -319,7 +319,7 @@ async fn login_nonexistent_and_wrong_password_return_same_status() {
 #[tokio::test]
 async fn login_with_api_key_credential() {
     let app = TestApp::new().await;
-    let token = app.service_token().await;
+    let token = app.service_token(0).await;
     let reg: Value = app
         .server
         .post("/v1/auth/register")
@@ -348,7 +348,7 @@ async fn login_with_api_key_credential() {
 #[tokio::test]
 async fn login_with_invalid_api_key_returns_401() {
     let app = TestApp::new().await;
-    let token = app.service_token().await;
+    let token = app.service_token(0).await;
     app.server
         .post("/v1/auth/login")
         .add_header("Authorization", &token)
@@ -367,8 +367,8 @@ async fn login_with_invalid_api_key_returns_401() {
 async fn login_with_expired_opaque_token_request() {
     // token with expiry in the past should be written but immediately invalid
     let app = TestApp::new().await;
-    register_password_user(&app, "expiredtokenuser", "hunter2").await;
-    let token = app.service_token().await;
+    register_password_user(&app, "expiredtokenuser", "hunter2", 0).await;
+    let token = app.service_token(0).await;
     let past = Utc::now() - chrono::Duration::days(1);
     let login: Value = app.server
         .post("/v1/auth/login")
@@ -415,7 +415,7 @@ async fn login_without_service_token_returns_401() {
 #[tokio::test]
 async fn login_malformed_body_returns_422() {
     let app = TestApp::new().await;
-    let token = app.service_token().await;
+    let token = app.service_token(0).await;
     app.server
         .post("/v1/auth/login")
         .add_header("Authorization", &token)

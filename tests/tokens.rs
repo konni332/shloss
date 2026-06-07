@@ -10,9 +10,9 @@ mod common;
 async fn validate_valid_opaque_token_returns_user_id() {
     let app = TestApp::new().await;
     let (token, user_id) = app
-        .register_and_login_opaque("validateuser", "hunter2")
+        .register_and_login_opaque("validateuser", "hunter2", 0)
         .await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let res: Value = app
         .server
         .post("/v1/tokens/validate")
@@ -27,7 +27,7 @@ async fn validate_valid_opaque_token_returns_user_id() {
 #[tokio::test]
 async fn validate_invalid_opaque_token_returns_invalid() {
     let app = TestApp::new().await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let res: Value = app
         .server
         .post("/v1/tokens/validate")
@@ -42,8 +42,8 @@ async fn validate_invalid_opaque_token_returns_invalid() {
 #[tokio::test]
 async fn validate_expired_opaque_token_returns_invalid() {
     let app = TestApp::new().await;
-    let service_token = app.service_token().await;
-    register_password_user(&app, "expireduser", "hunter2").await;
+    let service_token = app.service_token(0).await;
+    register_password_user(&app, "expireduser", "hunter2", 0).await;
     let login: Value = app
         .server
         .post("/v1/auth/login")
@@ -74,9 +74,9 @@ async fn validate_expired_opaque_token_returns_invalid() {
 async fn validate_revoked_opaque_token_returns_invalid() {
     let app = TestApp::new().await;
     let (token, _user_id) = app
-        .register_and_login_opaque("revokeduser", "hunter2")
+        .register_and_login_opaque("revokeduser", "hunter2", 0)
         .await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     // revoke it directly in the DB
     sqlx::query!(
         "UPDATE opaque_tokens SET revoked_at = NOW() WHERE hash = $1",
@@ -99,8 +99,8 @@ async fn validate_revoked_opaque_token_returns_invalid() {
 #[tokio::test]
 async fn validate_valid_jwt_returns_user_id() {
     let app = TestApp::new().await;
-    let service_token = app.service_token().await;
-    let reg: Value = register_password_user(&app, "jwtvalidateuser", "hunter2").await;
+    let service_token = app.service_token(0).await;
+    let reg: Value = register_password_user(&app, "jwtvalidateuser", "hunter2", 0).await;
     let expected_user_id = reg["userId"].as_str().unwrap();
     let login: Value = app
         .server
@@ -131,7 +131,7 @@ async fn validate_valid_jwt_returns_user_id() {
 #[tokio::test]
 async fn validate_invalid_jwt_returns_invalid() {
     let app = TestApp::new().await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let res: Value = app
         .server
         .post("/v1/tokens/validate")
@@ -158,9 +158,9 @@ async fn validate_requires_service_auth() {
 #[tokio::test]
 async fn refresh_valid_token_returns_new_opaque_and_refresh() {
     let app = TestApp::new().await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let (_, refresh) = app
-        .register_and_login_opaque_with_refresh("refreshuser", "hunter2")
+        .register_and_login_opaque_with_refresh("refreshuser", "hunter2", 0)
         .await;
     let res: Value = app
         .server
@@ -181,9 +181,9 @@ async fn refresh_valid_token_returns_new_opaque_and_refresh() {
 #[tokio::test]
 async fn refresh_valid_token_returns_new_jwt_and_refresh() {
     let app = TestApp::new().await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let (_, refresh) = app
-        .register_and_login_opaque_with_refresh("refreshjwtuser", "hunter2")
+        .register_and_login_opaque_with_refresh("refreshjwtuser", "hunter2", 0)
         .await;
     let res: Value = app
         .server
@@ -205,9 +205,9 @@ async fn refresh_valid_token_returns_new_jwt_and_refresh() {
 #[tokio::test]
 async fn refresh_replay_attack_returns_invalid() {
     let app = TestApp::new().await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let (_, refresh) = app
-        .register_and_login_opaque_with_refresh("replayuser", "hunter2")
+        .register_and_login_opaque_with_refresh("replayuser", "hunter2", 0)
         .await;
     // use the refresh token once
     app.server
@@ -237,8 +237,8 @@ async fn refresh_replay_attack_returns_invalid() {
 #[tokio::test]
 async fn refresh_expired_token_returns_invalid() {
     let app = TestApp::new().await;
-    let service_token = app.service_token().await;
-    register_password_user(&app, "expiredrefreshuser", "hunter2").await;
+    let service_token = app.service_token(0).await;
+    register_password_user(&app, "expiredrefreshuser", "hunter2", 0).await;
     let login: Value = app.server
         .post("/v1/auth/login")
         .add_header("Authorization", &service_token)
@@ -270,9 +270,9 @@ async fn refresh_expired_token_returns_invalid() {
 #[tokio::test]
 async fn refresh_revoked_token_returns_invalid() {
     let app = TestApp::new().await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let (_, refresh) = app
-        .register_and_login_opaque_with_refresh("revokedrefreshuser", "hunter2")
+        .register_and_login_opaque_with_refresh("revokedrefreshuser", "hunter2", 0)
         .await;
     sqlx::query!(
         "UPDATE refresh_tokens SET revoked_at = NOW() WHERE hash = $1",
@@ -298,7 +298,7 @@ async fn refresh_revoked_token_returns_invalid() {
 #[tokio::test]
 async fn refresh_invalid_token_returns_invalid() {
     let app = TestApp::new().await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let res: Value = app
         .server
         .post("/v1/auth/refresh")

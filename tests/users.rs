@@ -8,7 +8,7 @@ use uuid::Uuid;
 // helpers
 
 async fn register_and_get_user_id(app: &TestApp, username: &str, password: &str) -> String {
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let res: Value = app
         .server
         .post("/v1/auth/register")
@@ -26,7 +26,7 @@ async fn login_and_get_session_id(
     password: &str,
 ) -> (String, String) {
     // returns (opaque_token, session_id)
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let res: Value = app
         .server
         .post("/v1/auth/login")
@@ -58,7 +58,7 @@ async fn login_and_get_session_id(
 }
 
 async fn is_token_valid(app: &TestApp, token: &str) -> bool {
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let res: Value = app
         .server
         .post("/v1/tokens/validate")
@@ -77,7 +77,7 @@ async fn revoke_session_returns_200() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "sessionrevokeuser", "hunter2").await;
     let (_, session_id) = login_and_get_session_id(&app, "sessionrevokeuser", "hunter2").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .delete(&format!("/v1/users/{user_id}/sessions/{}", session_id))
         .add_header("Authorization", &service_token)
@@ -92,7 +92,7 @@ async fn revoke_session_invalidates_tokens() {
     let (token, session_id) =
         login_and_get_session_id(&app, "sessiontokenrevokeuser", "hunter2").await;
     assert!(is_token_valid(&app, &token).await);
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .delete(&format!("/v1/users/{user_id}/sessions/{}", session_id))
         .add_header("Authorization", &service_token)
@@ -104,7 +104,7 @@ async fn revoke_session_invalidates_tokens() {
 #[tokio::test]
 async fn revoke_nonexistent_session_returns_404() {
     let app = TestApp::new().await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .delete(&format!(
             "/v1/users/{}/sessions/{}",
@@ -135,7 +135,7 @@ async fn revoke_session_requires_service_auth() {
 async fn delete_user_returns_200() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "deleteuser", "hunter2").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .delete(&format!("/v1/users/{}", user_id))
         .add_header("Authorization", &service_token)
@@ -147,7 +147,7 @@ async fn delete_user_returns_200() {
 async fn delete_user_prevents_login() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "deleteloginuser", "hunter2").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .delete(&format!("/v1/users/{}", user_id))
         .add_header("Authorization", &service_token)
@@ -173,7 +173,7 @@ async fn delete_user_invalidates_tokens() {
     let user_id = register_and_get_user_id(&app, "deletetokenuser", "hunter2").await;
     let (token, _) = login_and_get_session_id(&app, "deletetokenuser", "hunter2").await;
     assert!(is_token_valid(&app, &token).await);
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .delete(&format!("/v1/users/{}", user_id))
         .add_header("Authorization", &service_token)
@@ -185,7 +185,7 @@ async fn delete_user_invalidates_tokens() {
 #[tokio::test]
 async fn delete_nonexistent_user_returns_404() {
     let app = TestApp::new().await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .delete(&format!("/v1/users/{}", Uuid::new_v4()))
         .add_header("Authorization", &service_token)
@@ -210,7 +210,7 @@ async fn list_sessions_returns_all_sessions() {
     let user_id = register_and_get_user_id(&app, "listsessionuser", "hunter2").await;
     login_and_get_session_id(&app, "listsessionuser", "hunter2").await;
     login_and_get_session_id(&app, "listsessionuser", "hunter2").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let res: Value = app
         .server
         .get(&format!("/v1/users/{}/sessions", user_id))
@@ -226,7 +226,7 @@ async fn list_sessions_includes_revoked_sessions() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "listrevokedsession", "hunter2").await;
     let (_, session_id) = login_and_get_session_id(&app, "listrevokedsession", "hunter2").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .delete(&format!("/v1/users/{user_id}/sessions/{}", session_id))
         .add_header("Authorization", &service_token)
@@ -247,7 +247,7 @@ async fn list_sessions_includes_revoked_sessions() {
 async fn list_sessions_empty_for_new_user() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "emptysessionuser", "hunter2").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let res: Value = app
         .server
         .get(&format!("/v1/users/{}/sessions", user_id))
@@ -273,7 +273,7 @@ async fn list_sessions_requires_service_auth() {
 async fn change_password_returns_200() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "changepassuser", "oldpass").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .post(&format!("/v1/users/{}/password", user_id))
         .add_header("Authorization", &service_token)
@@ -286,7 +286,7 @@ async fn change_password_returns_200() {
 async fn change_password_old_password_no_longer_works() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "oldpassinvalid", "oldpass").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .post(&format!("/v1/users/{}/password", user_id))
         .add_header("Authorization", &service_token)
@@ -311,7 +311,7 @@ async fn change_password_old_password_no_longer_works() {
 async fn change_password_new_password_works() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "newpassvalid", "oldpass").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .post(&format!("/v1/users/{}/password", user_id))
         .add_header("Authorization", &service_token)
@@ -336,7 +336,7 @@ async fn change_password_new_password_works() {
 async fn change_password_nonexistent_user_returns_404() {
     let app = TestApp::new().await;
     let fake_id = Uuid::new_v4();
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .post(&format!("/v1/users/{}/password", fake_id))
         .add_header("Authorization", &service_token)
@@ -361,7 +361,7 @@ async fn change_password_requires_service_auth() {
 async fn change_username_returns_200() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "changeusernameuser", "hunter2").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .post(&format!("/v1/users/{}/username", user_id))
         .add_header("Authorization", &service_token)
@@ -374,7 +374,7 @@ async fn change_username_returns_200() {
 async fn change_username_new_username_works_for_login() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "oldusername", "hunter2").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .post(&format!("/v1/users/{}/username", user_id))
         .add_header("Authorization", &service_token)
@@ -399,7 +399,7 @@ async fn change_username_new_username_works_for_login() {
 async fn change_username_old_username_no_longer_works() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "oldusername2", "hunter2").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .post(&format!("/v1/users/{}/username", user_id))
         .add_header("Authorization", &service_token)
@@ -425,7 +425,7 @@ async fn change_username_duplicate_returns_conflict() {
     let app = TestApp::new().await;
     register_and_get_user_id(&app, "takenusername", "hunter2").await;
     let user_id = register_and_get_user_id(&app, "otherusernameuser", "hunter2").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .post(&format!("/v1/users/{}/username", user_id))
         .add_header("Authorization", &service_token)
@@ -450,7 +450,7 @@ async fn change_username_requires_service_auth() {
 async fn add_api_key_returns_raw_key() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "apikeyuser", "hunter2").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let res: Value = app
         .server
         .post(&format!("/v1/users/{}/api-key", user_id))
@@ -469,7 +469,7 @@ async fn add_api_key_returns_raw_key() {
 async fn add_api_key_is_usable_for_login() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "apikeyloginuser", "hunter2").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let res: Value = app
         .server
         .post(&format!("/v1/users/{}/api-key", user_id))
@@ -499,7 +499,7 @@ async fn add_api_key_is_usable_for_login() {
 async fn add_expired_api_key_cannot_login() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "expiredapikeyuser", "hunter2").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let res: Value = app.server
         .post(&format!("/v1/users/{}/api-key", user_id))
         .add_header("Authorization", &service_token)
@@ -536,7 +536,7 @@ async fn add_api_key_requires_service_auth() {
 async fn revoke_api_key_prevents_login() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "revokeapikeyuser", "hunter2").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let res: Value = app
         .server
         .post(&format!("/v1/users/{}/api-key", user_id))
@@ -572,7 +572,7 @@ async fn revoke_api_key_prevents_login() {
 async fn revoke_nonexistent_api_key_is_idempotent() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "idempotentrevoke", "hunter2").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .delete(&format!("/v1/users/{}/api-key", user_id))
         .add_header("Authorization", &service_token)
@@ -595,7 +595,7 @@ async fn revoke_api_key_requires_service_auth() {
 async fn revoke_all_api_keys_prevents_all_logins() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "revokeallkeys", "hunter2").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     let key1: Value = app
         .server
         .post(&format!("/v1/users/{}/api-key", user_id))
@@ -639,7 +639,7 @@ async fn revoke_all_api_keys_prevents_all_logins() {
 async fn revoke_all_api_keys_user_still_exists() {
     let app = TestApp::new().await;
     let user_id = register_and_get_user_id(&app, "revokeallkeysexists", "hunter2").await;
-    let service_token = app.service_token().await;
+    let service_token = app.service_token(0).await;
     app.server
         .delete(&format!("/v1/users/{}/api-key/all", user_id))
         .add_header("Authorization", &service_token)

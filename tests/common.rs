@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use axum_test::TestServer;
 use serde_json::{Value, json};
 use shloss::{auth::ServiceKeyStore, build_router, jwt::Jwks, server::AppState};
@@ -5,7 +7,9 @@ use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-const TEST_SERVICE_KEY: &str = "shloss_testkey";
+const TEST_SERVICE_KEY_1: &str = "shloss_testkey";
+const TEST_SERVICE_KEY_2: &str = "shloss_testkey_2";
+const TEST_SERVICE_KEYS: &[&str] = &[TEST_SERVICE_KEY_1, TEST_SERVICE_KEY_2];
 
 pub struct TestApp {
     pub server: TestServer,
@@ -13,8 +17,13 @@ pub struct TestApp {
     pub state: AppState,
 }
 
-pub async fn register_password_user(app: &TestApp, username: &str, password: &str) -> Value {
-    let token = app.service_token().await;
+pub async fn register_password_user(
+    app: &TestApp,
+    username: &str,
+    password: &str,
+    service_id: usize,
+) -> Value {
+    let token = app.service_token(service_id).await;
     app.server
         .post("/v1/auth/register")
         .add_header("Authorization", &token)
@@ -61,7 +70,7 @@ impl TestApp {
             Arc::new(jsonwebtoken::DecodingKey::from_rsa_pem(public_key_pem.as_bytes()).unwrap());
         let jwks = Arc::new(Jwks::from_private_pem(&private_key_pem).unwrap());
 
-        let store = ServiceKeyStore::with_test_key(TEST_SERVICE_KEY);
+        let store = ServiceKeyStore::with_test_keys(TEST_SERVICE_KEYS);
 
         let state = AppState {
             pool: pool.clone(),
@@ -88,11 +97,11 @@ impl TestApp {
     }
 
     // logs in as the test service and returns the Bearer token
-    pub async fn service_token(&self) -> String {
+    pub async fn service_token(&self, service_id: usize) -> String {
         let res = self
             .server
             .post("/v1/auth/service")
-            .json(&json!({ "rawKey": TEST_SERVICE_KEY }))
+            .json(&json!({ "rawKey": TEST_SERVICE_KEYS[service_id] }))
             .await;
         res.assert_status_ok();
         let body: Value = res.json();
@@ -103,10 +112,11 @@ impl TestApp {
         &self,
         username: &str,
         password: &str,
+        service_id: usize,
     ) -> (String, String) {
-        let reg: Value = register_password_user(self, username, password).await;
+        let reg: Value = register_password_user(self, username, password, service_id).await;
         let user_id = reg["userId"].as_str().unwrap().to_string();
-        let service_token = self.service_token().await;
+        let service_token = self.service_token(service_id).await;
         let login: Value = self
             .server
             .post("/v1/auth/login")
@@ -129,9 +139,10 @@ impl TestApp {
         &self,
         username: &str,
         password: &str,
+        service_id: usize,
     ) -> (String, String) {
-        register_password_user(self, username, password).await;
-        let service_token = self.service_token().await;
+        register_password_user(self, username, password, service_id).await;
+        let service_token = self.service_token(service_id).await;
         let login: Value = self
             .server
             .post("/v1/auth/login")

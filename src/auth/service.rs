@@ -34,11 +34,13 @@ impl ServiceKeyStore {
         let hash = hash_secret(key);
         self.key_hashes.get(&hash).cloned()
     }
-    pub fn with_test_key(raw_key: &str) -> Self {
+    pub fn with_test_keys(raw_keys: &[&'static str]) -> Self {
         let mut store = Self::new();
-        let hash = hash_secret(raw_key);
-        let default_vault_id = Uuid::nil();
-        store.key_hashes.insert(hash, default_vault_id);
+        for (id, raw_key) in raw_keys.iter().enumerate() {
+            let hash = hash_secret(raw_key);
+            let vault_id = Uuid::from_u128(id as u128);
+            store.key_hashes.insert(hash, vault_id);
+        }
         store
     }
 }
