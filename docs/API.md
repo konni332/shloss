@@ -2,6 +2,10 @@
 
 This document describes the Shloss API, including routes, JSON objects, status codes and error cases
 
+## V1
+
+All the given routes in this document need to be prefixed with `/v1`. For example the route `/.well-known/jwks.json` needs to be used as `/v1/.well-known/jwks.json`.
+
 ## Well known
 
 ### GET `/.well-known/jwks.json`
