@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COUNT(s.id) FROM sessions s WHERE s.user_id = (SELECT id FROM users WHERE id = $1 AND vault_id = $2)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "85181a299fa5864b028bbfdf8e94136c974e6cdabd886eff9a80f6da0f51d8a5"
+}

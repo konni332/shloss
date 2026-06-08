@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT pc.username FROM users u JOIN password_credentials pc ON u.id = pc.user_id WHERE u.id = $1 AND u.vault_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "username",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "password_credentials",
+            "name": "username"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f3bfd9f931aaafc16770a04084ac2bb4b85bdfefdbfb6ee0952d626b6c619fbc"
+}

@@ -1,0 +1,42 @@
+services:
+  shloss:
+    build: .
+    image: shloss:local-test
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3000:3000" # ONLY accessible from your local machine
+    env_file:
+      - .env.production
+    volumes:
+      - ./config/shloss.toml:/app/shloss.toml:z
+      - ./config/client_credentials.toml:/app/client_credentials.toml:z
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      POSTGRES_USER: shloss_admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: shloss
+    volumes:
+      - shloss_test_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shloss_admin -d shloss"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+    ports:
+      - "127.0.0.1:5432:5432" # Exposed locally JUST so you can run migrations from your host
+
+volumes:
+  shloss_test_db_data:

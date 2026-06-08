@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE password_credentials SET username = $2, updated_at = NOW() WHERE user_id = (SELECT id FROM users WHERE id = $1 AND vault_id = $3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c1c58f9c55b99dfde648b5d7890b60aaa0f3de3a1463b494b4bc0f4f64e471e1"
+}
