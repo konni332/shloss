@@ -3,7 +3,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
 };
-use serde::Deserialize;
+use shloss_types::ChangePasswordRequest;
 use tracing::instrument;
 use uuid::Uuid;
 
@@ -12,12 +12,6 @@ use crate::{
     db,
     server::{AppState, AuthService},
 };
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChangePasswordRequest {
-    new_password: String,
-}
 
 #[instrument(skip(state, vault_id, body))]
 pub async fn api_change_password(

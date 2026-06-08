@@ -3,8 +3,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
 };
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use shloss_types::{AddApiKeyRequest, AddApiKeyResponse, RevokeApiKeyRequest};
 use tracing::instrument;
 use uuid::Uuid;
 
@@ -30,21 +29,6 @@ pub async fn api_revoke_all_api_keys(
             StatusCode::INTERNAL_SERVER_ERROR
         }
     }
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AddApiKeyRequest {
-    name: String,
-    key_prefix: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    expires_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AddApiKeyResponse {
-    key: String,
 }
 
 #[instrument(skip(state, vault_id, body), fields(key_prefix = %body.key_prefix))]
@@ -78,12 +62,6 @@ pub async fn api_add_api_key(
     Ok(Json(AddApiKeyResponse {
         key: generated_key.full_key,
     }))
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RevokeApiKeyRequest {
-    key: String,
 }
 
 #[instrument(skip(state, vault_id, body))]

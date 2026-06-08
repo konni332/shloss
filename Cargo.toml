@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/shloss-cli"]
+members = ["crates/shloss-cli", "crates/shloss-client", "crates/shloss-types"]
 resolver = "3"
 
 [package]
@@ -37,6 +37,7 @@ jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 tower = "0.5"
 rsa = { version = "0.9", features = ["pem"] }
 base64 = "0.22"
+shloss-types = { path = "./crates/shloss-types" }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

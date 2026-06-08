@@ -1,10 +1,7 @@
-use std::collections::HashMap;
-
-use chrono::{DateTime, Utc};
-use ipnetwork::IpNetwork;
 use jsonwebtoken::EncodingKey;
-use serde::Deserialize;
-use serde_json::Value;
+use shloss_types::{
+    Credentials, IssuedToken, LoginContext, LoginResult, RefreshTokenRequest, TokenType,
+};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -14,65 +11,6 @@ use crate::{
     error::ShlossResult,
     jwt::generate_jwt,
 };
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase", tag = "kind")]
-pub enum Credentials {
-    #[serde(rename = "password", rename_all = "camelCase")]
-    Password { username: String, password: String },
-    #[serde(rename = "apiKey", rename_all = "camelCase")]
-    ApiKey { full_key: String },
-}
-
-impl std::fmt::Display for Credentials {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Password { .. } => write!(f, "password"),
-            Self::ApiKey { .. } => write!(f, "api-key"),
-        }
-    }
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase", tag = "kind")]
-pub enum TokenType {
-    #[serde(rename = "jwt", rename_all = "camelCase")]
-    Jwt { claims: HashMap<String, Value> },
-    #[serde(rename = "opaque", rename_all = "camelCase")]
-    Opaque { expires_at: DateTime<Utc> },
-}
-
-impl std::fmt::Display for TokenType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Jwt { .. } => write!(f, "jwt"),
-            Self::Opaque { .. } => write!(f, "opaque"),
-        }
-    }
-}
-
-pub struct RefreshTokenRequest {
-    pub expires_at: DateTime<Utc>,
-}
-
-pub struct LoginContext {
-    pub credentials: Credentials,
-    pub ip_address: Option<IpNetwork>,
-    pub user_agent: Option<String>,
-    pub token: TokenType,
-    pub refresh: Option<RefreshTokenRequest>,
-}
-
-pub enum IssuedToken {
-    Jwt(String),
-    Opaque(String),
-}
-
-pub struct LoginResult {
-    pub user_id: Uuid,
-    pub token: IssuedToken,
-    pub refresh_token: Option<String>,
-}
 
 pub async fn login(
     pool: &PgPool,

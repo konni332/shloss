@@ -1,19 +1,9 @@
 use axum::{Json, extract::State, http::StatusCode};
-use serde::{Deserialize, Serialize};
+use shloss_types::{LoginServiceRequest, LoginServiceResponse};
 use tracing::{info, instrument, warn};
 
 use crate::{auth, server::AppState};
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct LoginServiceRequest {
-    raw_key: String,
-}
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct LoginServiceResponse {
-    token: String,
-}
 #[instrument(skip(state, body))]
 pub async fn api_login_service(
     State(state): State<AppState>,

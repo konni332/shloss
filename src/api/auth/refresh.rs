@@ -1,33 +1,14 @@
 use axum::{Json, extract::State, http::StatusCode};
-use serde::{Deserialize, Serialize};
+use shloss_types::{RefreshRequest, RefreshResponse, TokenType};
 use tracing::instrument;
 
 use crate::{
-    auth::{TokenType, validate_refresh_token},
+    auth::validate_refresh_token,
     crypto::generate_token,
     db,
     jwt::generate_jwt,
     server::{AppState, AuthService},
 };
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RefreshRequest {
-    refresh_token: String,
-    token_type: TokenType,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase", tag = "status")]
-pub enum RefreshResponse {
-    #[serde(rename = "invalid")]
-    Invalid,
-    #[serde(rename = "valid", rename_all = "camelCase")]
-    Valid {
-        new_refresh: String,
-        new_token: String,
-    },
-}
 
 #[instrument(skip(state, vault_id, body))]
 pub async fn api_refresh_token(

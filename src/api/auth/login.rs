@@ -1,35 +1,11 @@
 use axum::{Json, extract::State, http::StatusCode};
-use chrono::{DateTime, Utc};
-use ipnetwork::IpNetwork;
-use serde::{Deserialize, Serialize};
+use shloss_types::{IssuedToken, LoginContext, LoginRequest, LoginResponse, RefreshTokenRequest};
 use tracing::instrument;
-use uuid::Uuid;
 
 use crate::{
-    auth::{self, Credentials, IssuedToken, LoginContext, RefreshTokenRequest, TokenType},
+    auth,
     server::{AppState, AuthService},
 };
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct LoginRequest {
-    credentials: Credentials,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    ip_address: Option<IpNetwork>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    user_agent: Option<String>,
-    token_kind: TokenType,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    refresh_expiry: Option<DateTime<Utc>>,
-}
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct LoginResponse {
-    user_id: Uuid,
-    token: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    refresh_token: Option<String>,
-}
 
 #[instrument(
     skip(state, vault_id, body),

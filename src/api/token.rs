@@ -1,46 +1,11 @@
 use axum::{Json, extract::State, http::StatusCode};
-use serde::{Deserialize, Serialize};
+use shloss_types::{TokenKind, TokenValidateRequest, TokenValidateResponse};
 use tracing::instrument;
-use uuid::Uuid;
 
 use crate::{
     auth::{validate_jwt, validate_opaque_token},
     server::{AppState, AuthService},
 };
-
-#[derive(Deserialize)]
-enum TokenKind {
-    #[serde(rename = "jwt")]
-    Jwt,
-    #[serde(rename = "opaque")]
-    Opaque,
-}
-
-impl std::fmt::Display for TokenKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Jwt => write!(f, "jwt"),
-            Self::Opaque => write!(f, "opaque"),
-        }
-    }
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TokenValidateRequest {
-    token: String,
-    kind: TokenKind,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase", tag = "status")]
-pub enum TokenValidateResponse {
-    #[serde(rename = "invalid")]
-    Invalid,
-    #[serde(rename = "valid", rename_all = "camelCase")]
-    Valid { user_id: Uuid },
-}
-
 #[instrument(skip(state, vault_id, body), fields(token_kind = %body.kind))]
 pub async fn api_validate_token(
     State(state): State<AppState>,

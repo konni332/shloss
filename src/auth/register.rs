@@ -1,8 +1,8 @@
+use shloss_types::{RegisterRequest, RegisterResponse};
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{
-    api::auth::register::{RegisterRequest, RegisterResponse},
     crypto::{generate_api_key, hash_password},
     db::{ApiKey, PasswordCredential, User},
     error::ShlossResult,
