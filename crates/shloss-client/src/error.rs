@@ -10,4 +10,6 @@ pub enum ClientError {
     Conflict,
     #[error("server error")]
     ServerError,
+    #[error("ipnetwork parsing error: {0}")]
+    IpNetworkParsing(#[from] ipnetwork::IpNetworkError),
 }

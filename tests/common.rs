@@ -2,7 +2,8 @@
 
 use axum_test::TestServer;
 use serde_json::{Value, json};
-use shloss::{auth::ServiceKeyStore, build_router, jwt::Jwks, server::AppState};
+use shloss::{auth::ServiceKeyStore, build_router, jwt::jwk_from_private_pem, server::AppState};
+use shloss_types::Jwks;
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -68,7 +69,7 @@ impl TestApp {
             std::env::var("SHLOSS_TEST_PUBLIC_KEY").expect("SHLOSS_TEST_PUBLIC_KEY not present");
         let decoding_key =
             Arc::new(jsonwebtoken::DecodingKey::from_rsa_pem(public_key_pem.as_bytes()).unwrap());
-        let jwks = Arc::new(Jwks::from_private_pem(&private_key_pem).unwrap());
+        let jwks = Arc::new(jwk_from_private_pem(&private_key_pem).unwrap());
 
         let store = ServiceKeyStore::with_test_keys(TEST_SERVICE_KEYS);
 

@@ -5,6 +5,7 @@ use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, deco
 use rsa::{RsaPrivateKey, pkcs8::DecodePrivateKey, traits::PublicKeyParts};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use shloss_types::{Jwk, Jwks};
 use uuid::Uuid;
 
 use crate::error::CryptoError;
@@ -37,39 +38,19 @@ pub fn verify_jwt(token: &str, decoding_key: &DecodingKey) -> Result<Claims, Cry
         .map_err(|_| CryptoError::Jwt)
 }
 
-#[derive(Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct Jwks {
-    keys: Vec<Jwk>,
-}
+pub fn jwk_from_private_pem(pem: &str) -> anyhow::Result<Jwks> {
+    let private_key = RsaPrivateKey::from_pkcs8_pem(pem)?;
+    let n = URL_SAFE_NO_PAD.encode(private_key.n().to_bytes_be());
+    let e = URL_SAFE_NO_PAD.encode(private_key.e().to_bytes_be());
 
-#[derive(Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct Jwk {
-    kty: String, // key type, always "RSA"
-    alg: String, // always "RS256"
-    #[serde(rename = "use")]
-    use_: String, // always "sig"
-    n: String,   // modulus base64url
-    e: String,   // exponent base64url
-    kid: String, // key id, so services can identify which key to use
-}
-
-impl Jwks {
-    pub fn from_private_pem(pem: &str) -> anyhow::Result<Self> {
-        let private_key = RsaPrivateKey::from_pkcs8_pem(pem)?;
-        let n = URL_SAFE_NO_PAD.encode(private_key.n().to_bytes_be());
-        let e = URL_SAFE_NO_PAD.encode(private_key.e().to_bytes_be());
-
-        Ok(Self {
-            keys: vec![Jwk {
-                kty: "RSA".to_string(),
-                alg: "RS256".to_string(),
-                use_: "sig".to_string(),
-                n,
-                e,
-                kid: "1".to_string(),
-            }],
-        })
-    }
+    Ok(Jwks {
+        keys: vec![Jwk {
+            kty: "RSA".to_string(),
+            alg: "RS256".to_string(),
+            use_: "sig".to_string(),
+            n,
+            e,
+            kid: "1".to_string(),
+        }],
+    })
 }

@@ -1,15 +1,13 @@
 use std::sync::Arc;
 
 use axum::{extract::FromRequestParts, http::StatusCode};
+use shloss_types::Jwks;
 use sqlx::PgPool;
 use tokio::sync::RwLock;
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::{
-    auth::{ServiceKeyStore, validate_service_token},
-    jwt::Jwks,
-};
+use crate::auth::{ServiceKeyStore, validate_service_token};
 
 #[derive(Clone)]
 pub struct AppState {

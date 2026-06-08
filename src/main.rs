@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use shloss::{db, init_logging, load_client_credentials, load_config};
+use shloss::{db, init_logging, jwt::jwk_from_private_pem, load_client_credentials, load_config};
 use tokio::sync::RwLock;
 use tracing::info;
 
@@ -37,9 +37,7 @@ async fn main() -> anyhow::Result<()> {
         jsonwebtoken::DecodingKey::from_rsa_pem(public_key_pem.as_bytes())
             .context("invalid private key")?,
     );
-    let jwks = Arc::new(
-        shloss::jwt::Jwks::from_private_pem(&private_key_pem).context("failed to build JWKS")?,
-    );
+    let jwks = Arc::new(jwk_from_private_pem(&private_key_pem).context("failed to build JWKS")?);
 
     let state = shloss::server::AppState {
         pool,

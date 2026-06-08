@@ -6,14 +6,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TokenValidateRequest {
     pub token: String,
     pub kind: TokenKind,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "status")]
 pub enum TokenValidateResponse {
     #[serde(rename = "invalid")]
@@ -22,7 +22,7 @@ pub enum TokenValidateResponse {
     Valid { user_id: Uuid },
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub enum TokenKind {
     #[serde(rename = "jwt")]
     Jwt,
@@ -39,7 +39,7 @@ impl std::fmt::Display for TokenKind {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginRequest {
     pub credentials: Credentials,
@@ -51,7 +51,7 @@ pub struct LoginRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refresh_expiry: Option<DateTime<Utc>>,
 }
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginResponse {
     pub user_id: Uuid,
@@ -60,14 +60,14 @@ pub struct LoginResponse {
     pub refresh_token: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RefreshRequest {
     pub refresh_token: String,
     pub token_type: TokenType,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "status")]
 pub enum RefreshResponse {
     #[serde(rename = "invalid")]
@@ -79,18 +79,18 @@ pub enum RefreshResponse {
     },
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginServiceRequest {
     pub raw_key: String,
 }
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginServiceResponse {
     pub token: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", tag = "kind")]
 pub enum RegisterRequest {
     #[serde(rename = "password", rename_all = "camelCase")]
@@ -102,7 +102,7 @@ pub enum RegisterRequest {
         expires_at: Option<DateTime<Utc>>,
     },
 }
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "kind")]
 pub enum RegisterResponse {
     #[serde(rename = "password", rename_all = "camelCase")]
@@ -131,7 +131,7 @@ impl std::fmt::Display for RegisterResponse {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AddApiKeyRequest {
     pub name: String,
@@ -140,31 +140,31 @@ pub struct AddApiKeyRequest {
     pub expires_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AddApiKeyResponse {
     pub key: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RevokeApiKeyRequest {
     pub key: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChangeUsernameRequest {
     pub new_username: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChangePasswordRequest {
     pub new_password: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", tag = "kind")]
 pub enum Credentials {
     #[serde(rename = "password", rename_all = "camelCase")]
@@ -182,7 +182,7 @@ impl std::fmt::Display for Credentials {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", tag = "kind")]
 pub enum TokenType {
     #[serde(rename = "jwt", rename_all = "camelCase")]
@@ -221,4 +221,22 @@ pub struct LoginResult {
     pub user_id: Uuid,
     pub token: IssuedToken,
     pub refresh_token: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Jwks {
+    pub keys: Vec<Jwk>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Jwk {
+    pub kty: String, // key type, always "RSA"
+    pub alg: String, // always "RS256"
+    #[serde(rename = "use")]
+    pub use_: String, // always "sig"
+    pub n: String,   // modulus base64url
+    pub e: String,   // exponent base64url
+    pub kid: String, // key id, so services can identify which key to use
 }

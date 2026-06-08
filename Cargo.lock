@@ -2829,9 +2829,12 @@ dependencies = [
 name = "shloss-client"
 version = "0.1.0"
 dependencies = [
+ "chrono",
+ "ipnetwork",
  "reqwest",
  "serde",
  "serde_json",
+ "shloss-types",
  "thiserror",
 ]
 
@@ -2841,6 +2844,8 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "ipnetwork",
+ "jsonwebtoken",
+ "rsa",
  "serde",
  "serde_json",
  "uuid",
