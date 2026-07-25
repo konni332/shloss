@@ -164,7 +164,7 @@ pub struct ChangePasswordRequest {
     pub new_password: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase", tag = "kind")]
 pub enum Credentials {
     #[serde(rename = "password", rename_all = "camelCase")]
@@ -182,7 +182,7 @@ impl std::fmt::Display for Credentials {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase", tag = "kind")]
 pub enum TokenType {
     #[serde(rename = "jwt", rename_all = "camelCase")]

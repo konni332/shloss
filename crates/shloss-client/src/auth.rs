@@ -7,124 +7,84 @@ use shloss_types::{
     Credentials, LoginResponse, RefreshRequest, RefreshResponse, RegisterRequest, RegisterResponse,
     TokenType,
 };
+use stave::{builder, methods};
 
 use crate::error::ClientError;
 
-pub struct NoCredentials;
-pub struct NoTokenKind;
-pub struct WithCredentials(pub Credentials);
-pub struct WithTokenKind(pub TokenType);
-
-#[derive(Default)]
-pub struct LoginBuilder<C, T> {
-    credentials: C,
-    token_kind: T,
-    ip_address: Option<String>,
-    user_agent: Option<String>,
-    refresh_expiry: Option<DateTime<Utc>>,
+#[builder]
+pub struct LoginBuilder {
+    #[stave(required)]
+    credentials: Credentials,
+    #[stave(required)]
+    token_kind: TokenType,
+    ip_address: String,
+    user_agent: String,
+    refresh_expiry: DateTime<Utc>,
 }
 
-impl LoginBuilder<NoCredentials, NoTokenKind> {
-    pub fn new() -> Self {
-        Self {
-            credentials: NoCredentials,
-            token_kind: NoTokenKind,
-            ip_address: None,
-            user_agent: None,
-            refresh_expiry: None,
-        }
-    }
+#[methods]
+impl LoginBuilder {
+    #[sets(credentials)]
     pub fn with_password(
         self,
         username: impl Into<String>,
         password: impl Into<String>,
-    ) -> LoginBuilder<WithCredentials, NoTokenKind> {
-        LoginBuilder {
-            credentials: WithCredentials(Credentials::Password {
-                username: username.into(),
-                password: password.into(),
-            }),
-            token_kind: NoTokenKind,
-            ip_address: None,
-            user_agent: None,
-            refresh_expiry: None,
+    ) -> Credentials {
+        Credentials::Password {
+            username: username.into(),
+            password: password.into(),
         }
     }
-    pub fn with_api_key(
-        self,
-        full_key: impl Into<String>,
-    ) -> LoginBuilder<WithCredentials, NoTokenKind> {
-        LoginBuilder {
-            credentials: WithCredentials(Credentials::ApiKey {
-                full_key: full_key.into(),
-            }),
-            token_kind: NoTokenKind,
-            ip_address: None,
-            user_agent: None,
-            refresh_expiry: None,
+    #[sets(credentials)]
+    pub fn with_api_key(self, full_key: impl Into<String>) -> Credentials {
+        Credentials::ApiKey {
+            full_key: full_key.into(),
         }
     }
-}
-
-impl LoginBuilder<WithCredentials, NoTokenKind> {
-    pub fn opaque_token(
-        self,
-        expires_at: DateTime<Utc>,
-    ) -> LoginBuilder<WithCredentials, WithTokenKind> {
-        LoginBuilder {
-            credentials: self.credentials,
-            token_kind: WithTokenKind(TokenType::Opaque { expires_at }),
-            ip_address: self.ip_address,
-            user_agent: self.user_agent,
-            refresh_expiry: self.refresh_expiry,
-        }
+    #[sets(token_kind)]
+    #[requires(credentials)]
+    pub fn opaque_token(self, expires_at: DateTime<Utc>) -> TokenType {
+        TokenType::Opaque { expires_at }
     }
 
-    pub fn jwt_token(
-        self,
-        claims: HashMap<String, Value>,
-    ) -> LoginBuilder<WithCredentials, WithTokenKind> {
-        LoginBuilder {
-            credentials: self.credentials,
-            token_kind: WithTokenKind(TokenType::Jwt { claims }),
-            ip_address: self.ip_address,
-            user_agent: self.user_agent,
-            refresh_expiry: self.refresh_expiry,
-        }
-    }
-}
-
-impl<T> LoginBuilder<WithCredentials, T> {
-    pub fn ip_address(mut self, ip: impl Into<String>) -> Self {
-        self.ip_address = Some(ip.into());
-        self
+    #[sets(token_kind)]
+    #[requires(credentials)]
+    pub fn jwt_token(self, claims: HashMap<String, Value>) -> TokenType {
+        TokenType::Jwt { claims }
     }
 
-    pub fn user_agent(mut self, ua: impl Into<String>) -> Self {
-        self.user_agent = Some(ua.into());
-        self
+    #[sets(ip_address)]
+    #[requires(credentials)]
+    pub fn set_ip_address(mut self, ip: impl Into<String>) -> String {
+        ip.into()
+    }
+    #[sets(user_agent)]
+    #[requires(credentials)]
+    pub fn set_user_agent(mut self, user_agent: impl Into<String>) -> String {
+        user_agent.into()
+    }
+    #[sets(refresh_expiry)]
+    #[requires(credentials)]
+    pub fn with_refresh(mut self, expires_at: DateTime<Utc>) -> DateTime<Utc> {
+        expires_at
     }
 
-    pub fn with_refresh(mut self, expires_at: DateTime<Utc>) -> Self {
-        self.refresh_expiry = Some(expires_at);
-        self
-    }
-}
-
-impl LoginBuilder<WithCredentials, WithTokenKind> {
+    #[requires(credentials, token_kind)]
     pub async fn send(
         self,
         base_url: &str,
         service_token: &str,
     ) -> Result<LoginResponse, ClientError> {
+        let credentials = self.credentials().clone();
+        let token_kind = self.token_kind().clone();
         let body = shloss_types::LoginRequest {
-            credentials: self.credentials.0,
+            credentials,
             ip_address: self
                 .ip_address
                 .map(|ip| IpNetwork::from_str(&ip))
                 .transpose()?,
             user_agent: self.user_agent,
-            token_kind: self.token_kind.0,
+            token_kind,
             refresh_expiry: self.refresh_expiry,
         };
         let res = reqwest::Client::new()
@@ -141,144 +101,122 @@ impl LoginBuilder<WithCredentials, WithTokenKind> {
     }
 }
 
-pub struct NoKind;
-pub struct PasswordKind {
-    username: String,
-    password: String,
-}
-pub struct ApiKeyKind {
-    name: String,
-    key_prefix: String,
-    expires_at: Option<DateTime<Utc>>,
-}
-#[derive(Default)]
-pub struct RegisterBuilder<K> {
-    kind: K,
+#[derive(Clone)]
+pub enum RegisterCredentials {
+    Password {
+        username: String,
+        password: String,
+    },
+    ApiKey {
+        name: String,
+        key_prefix: String,
+        expires_at: Option<DateTime<Utc>>,
+    },
 }
 
-impl RegisterBuilder<NoKind> {
-    pub fn new() -> Self {
-        Self { kind: NoKind }
-    }
+#[builder]
+pub struct RegisterBuilder {
+    #[stave(required)]
+    credentials: RegisterCredentials,
+}
 
-    pub fn password(
+#[methods]
+impl RegisterBuilder {
+    #[sets(credentials)]
+    pub fn with_password(
         self,
         username: impl Into<String>,
         password: impl Into<String>,
-    ) -> RegisterBuilder<PasswordKind> {
-        RegisterBuilder {
-            kind: PasswordKind {
-                username: username.into(),
-                password: password.into(),
-            },
+    ) -> RegisterCredentials {
+        RegisterCredentials::Password {
+            username: username.into(),
+            password: password.into(),
         }
     }
-
-    pub fn api_key(
+    #[sets(credentials)]
+    pub fn with_api_key(
         self,
         name: impl Into<String>,
         key_prefix: impl Into<String>,
-    ) -> RegisterBuilder<ApiKeyKind> {
-        RegisterBuilder {
-            kind: ApiKeyKind {
+        expires_at: Option<DateTime<Utc>>,
+    ) -> Credentials {
+        RegisterCredentials::ApiKey {
+            name: name.into(),
+            key_prefix: key_prefix.into(),
+            expires_at,
+        }
+    }
+
+    #[requires(credentials)]
+    pub async fn send(
+        self,
+        base_url: &str,
+        service_token: &str,
+    ) -> Result<RegisterResponse, ClientError> {
+        let body = match self.credentials() {
+            RegisterCredentials::Password { username, password } => RegisterRequest::Password {
+                username: username.into(),
+                password: password.into(),
+            },
+            RegisterCredentials::ApiKey {
+                name,
+                key_prefix,
+                expires_at,
+            } => RegisterRequest::ApiKey {
                 name: name.into(),
                 key_prefix: key_prefix.into(),
-                expires_at: None,
+                expires_at: *expires_at,
             },
+        };
+
+        let res = reqwest::Client::new()
+            .post(format!("{}/v1/auth/register", base_url))
+            .bearer_auth(service_token)
+            .json(&body)
+            .send()
+            .await?;
+        match res.status().as_u16() {
+            200 => Ok(res.json().await?),
+            401 => Err(ClientError::Unauthorized),
+            409 => Err(ClientError::Conflict),
+            _ => Err(ClientError::ServerError),
         }
     }
 }
 
-impl RegisterBuilder<ApiKeyKind> {
-    pub fn expires_at(mut self, expires_at: DateTime<Utc>) -> Self {
-        self.kind.expires_at = Some(expires_at);
-        self
-    }
-
-    pub async fn send(
-        self,
-        base_url: &str,
-        service_token: &str,
-    ) -> Result<RegisterResponse, ClientError> {
-        let body = RegisterRequest::ApiKey {
-            name: self.kind.name,
-            key_prefix: self.kind.key_prefix,
-            expires_at: self.kind.expires_at,
-        };
-        send_register(base_url, service_token, &body).await
-    }
-}
-
-impl RegisterBuilder<PasswordKind> {
-    pub async fn send(
-        self,
-        base_url: &str,
-        service_token: &str,
-    ) -> Result<RegisterResponse, ClientError> {
-        let body = RegisterRequest::Password {
-            username: self.kind.username,
-            password: self.kind.password,
-        };
-        send_register(base_url, service_token, &body).await
-    }
-}
-
-async fn send_register(
-    base_url: &str,
-    service_token: &str,
-    body: &RegisterRequest,
-) -> Result<RegisterResponse, ClientError> {
-    let res = reqwest::Client::new()
-        .post(format!("{}/v1/auth/register", base_url))
-        .bearer_auth(service_token)
-        .json(body)
-        .send()
-        .await?;
-    match res.status().as_u16() {
-        200 => Ok(res.json().await?),
-        401 => Err(ClientError::Unauthorized),
-        409 => Err(ClientError::Conflict),
-        _ => Err(ClientError::ServerError),
-    }
-}
-
-#[derive(Default)]
-pub struct RefreshBuilder<T> {
+#[builder]
+pub struct RefreshBuilder {
+    #[stave(required)]
     pub refresh_token: String,
-    pub token_kind: T,
+    #[stave(required)]
+    pub token_kind: TokenType,
 }
 
-impl RefreshBuilder<NoTokenKind> {
-    pub fn new(refresh_token: impl Into<String>) -> RefreshBuilder<NoTokenKind> {
-        Self {
-            refresh_token: refresh_token.into(),
-            token_kind: NoTokenKind,
-        }
+#[methods]
+impl RefreshBuilder {
+    #[sets(token_kind)]
+    pub fn with_opaque_token(self, expires_at: DateTime<Utc>) -> TokenType {
+        TokenType::Opaque { expires_at }
     }
-    pub fn opaque_token(self, expires_at: DateTime<Utc>) -> RefreshBuilder<WithTokenKind> {
-        RefreshBuilder {
-            refresh_token: self.refresh_token,
-            token_kind: WithTokenKind(TokenType::Opaque { expires_at }),
-        }
+    #[sets(token_kind)]
+    pub fn with_jwt(self, claims: HashMap<String, Value>) -> TokenType {
+        TokenType::Jwt { claims }
     }
 
-    pub fn jwt_token(self, claims: HashMap<String, Value>) -> RefreshBuilder<WithTokenKind> {
-        RefreshBuilder {
-            refresh_token: self.refresh_token,
-            token_kind: WithTokenKind(TokenType::Jwt { claims }),
-        }
+    #[sets(refresh_token)]
+    pub fn set_refresh_token(self, token: impl Into<String>) -> String {
+        token.into()
     }
-}
 
-impl RefreshBuilder<WithTokenKind> {
+    #[requires(refresh_token, token_kind)]
     pub async fn send(
         self,
         base_url: &str,
         service_token: &str,
     ) -> Result<RefreshResponse, ClientError> {
         let body = RefreshRequest {
-            refresh_token: self.refresh_token,
-            token_type: self.token_kind.0,
+            refresh_token: self.refresh_token().clone(),
+            token_type: self.token_kind().clone(),
         };
         let res = reqwest::Client::new()
             .post(format!("{base_url}/v1/auth/refresh"))

@@ -11,3 +11,4 @@ reqwest = { version = "0.13", features = ["json"] }
 shloss-types = { path = "../shloss-types" }
 chrono = { version = "0.4", features = ["serde"] }
 ipnetwork = { version = "0.21", features = ["serde"] }
+stave = "0.2.1"
