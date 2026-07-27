@@ -4,8 +4,8 @@ use chrono::{DateTime, Utc};
 use ipnetwork::IpNetwork;
 use serde_json::Value;
 use shloss_types::{
-    Credentials, LoginResponse, RefreshRequest, RefreshResponse, RegisterRequest, RegisterResponse,
-    TokenType,
+    Credentials, LoginResponse, LoginServiceRequest, LoginServiceResponse, RefreshRequest,
+    RefreshResponse, RegisterRequest, RegisterResponse, TokenType,
 };
 use stave::{builder, methods};
 
@@ -226,6 +226,35 @@ impl RefreshBuilder {
             .await?;
         match res.status().as_u16() {
             200 => Ok(res.json().await?),
+            _ => Err(ClientError::ServerError),
+        }
+    }
+}
+
+pub struct ServiceLoginBuilder {
+    raw_key: String,
+}
+
+impl ServiceLoginBuilder {
+    pub fn new(raw_key: impl Into<String>) -> Self {
+        Self {
+            raw_key: raw_key.into(),
+        }
+    }
+
+    pub async fn send(self, base_url: &str) -> Result<LoginServiceResponse, ClientError> {
+        let body = LoginServiceRequest {
+            raw_key: self.raw_key,
+        };
+        let res = reqwest::Client::new()
+            .post(format!("{base_url}/v1/auth/service"))
+            .json(&body)
+            .send()
+            .await?;
+
+        match res.status().as_u16() {
+            200 => Ok(res.json().await?),
+            401 => Err(ClientError::Unauthorized),
             _ => Err(ClientError::ServerError),
         }
     }

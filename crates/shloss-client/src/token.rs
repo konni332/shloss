@@ -1,47 +1,42 @@
 use shloss_types::{TokenValidateRequest, TokenValidateResponse};
+use stave::{builder, methods};
 
 use crate::error::ClientError;
 
-pub struct NoToken;
-pub enum WithToken {
+pub enum TokenType {
     Jwt(String),
     Opaque(String),
 }
 
-#[derive(Default)]
-pub struct ValidateBuilder<T> {
-    kind: T,
+#[builder]
+pub struct ValidateBuilder {
+    #[stave(required)]
+    kind: TokenType,
 }
 
-impl ValidateBuilder<NoToken> {
-    pub fn new() -> ValidateBuilder<NoToken> {
-        ValidateBuilder { kind: NoToken }
+#[methods]
+impl ValidateBuilder {
+    #[sets(kind)]
+    pub fn with_jwt(self, token: impl Into<String>) -> TokenType {
+        TokenType::Jwt(token.into())
     }
-    pub fn jwt_token(self, token: impl Into<String>) -> ValidateBuilder<WithToken> {
-        ValidateBuilder {
-            kind: WithToken::Jwt(token.into()),
-        }
+    #[sets(kind)]
+    pub fn with_opaque(self, token: impl Into<String>) -> TokenType {
+        TokenType::Opaque(token.into())
     }
-    pub fn opaque_token(self, token: impl Into<String>) -> ValidateBuilder<WithToken> {
-        ValidateBuilder {
-            kind: WithToken::Opaque(token.into()),
-        }
-    }
-}
-
-impl ValidateBuilder<WithToken> {
+    #[requires(kind)]
     pub async fn send(
         self,
         base_url: &str,
         service_token: &str,
     ) -> Result<TokenValidateResponse, ClientError> {
-        let body = match self.kind {
-            WithToken::Jwt(t) => TokenValidateRequest {
-                token: t,
+        let body = match self.kind() {
+            TokenType::Jwt(t) => TokenValidateRequest {
+                token: t.into(),
                 kind: shloss_types::TokenKind::Jwt,
             },
-            WithToken::Opaque(t) => TokenValidateRequest {
-                token: t,
+            TokenType::Opaque(t) => TokenValidateRequest {
+                token: t.into(),
                 kind: shloss_types::TokenKind::Opaque,
             },
         };
