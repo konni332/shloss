@@ -12,3 +12,4 @@ shloss-types = { path = "../shloss-types" }
 chrono = { version = "0.4", features = ["serde"] }
 ipnetwork = { version = "0.21", features = ["serde"] }
 stave = "0.2.1"
+uuid = { version = "1", features = ["v4", "serde"] }

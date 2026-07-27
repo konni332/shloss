@@ -2883,6 +2883,7 @@ dependencies = [
  "shloss-types",
  "stave",
  "thiserror",
+ "uuid",
 ]
 
 [[package]]

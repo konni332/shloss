@@ -4,7 +4,7 @@ use crate::{
         __RefreshBuilderRefreshTokenSet, __RefreshBuilderTokenKindUnset,
         __RegisterBuilderCredentialsUnset, LoginBuilder, RefreshBuilder, RegisterBuilder,
     },
-    token::{NoToken, ValidateBuilder},
+    token::{__ValidateBuilderKindUnset, ValidateBuilder},
     well_known::JwksBuilder,
 };
 
@@ -12,6 +12,7 @@ pub mod auth;
 pub mod error;
 pub mod token;
 mod types;
+pub mod users;
 pub mod well_known;
 
 pub struct Request;
@@ -31,7 +32,7 @@ impl Request {
     pub fn jwks() -> JwksBuilder {
         JwksBuilder
     }
-    pub fn validate_jwt() -> ValidateBuilder<NoToken> {
+    pub fn validate_jwt() -> ValidateBuilder<__ValidateBuilderKindUnset> {
         ValidateBuilder::new()
     }
 }
