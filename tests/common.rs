@@ -3,7 +3,6 @@
 use axum_test::TestServer;
 use serde_json::{Value, json};
 use shloss::{auth::ServiceKeyStore, build_router, jwt::jwk_from_private_pem, server::AppState};
-use shloss_types::Jwks;
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::sync::Arc;
 use tokio::sync::RwLock;
